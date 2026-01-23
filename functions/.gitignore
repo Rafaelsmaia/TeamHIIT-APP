@@ -1,0 +1,43 @@
+node_modules/
+npm-debug.log
+.env
+.env.local
+.firebase/
+*.log
+
+# Arquivos sensíveis - NUNCA COMMITAR!
+serviceAccount.json
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+
+# Dados de usuários - NUNCA COMMITAR!
+users.csv
+*.csv
+!users-example.csv
+
+# Arquivos temporários
+preview-email.html
+preview-email.js
+test-output.txt
+resultado.txt
+output.txt
+
+# Scripts específicos de usuário
+send-*.js
+!send-email-manually.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

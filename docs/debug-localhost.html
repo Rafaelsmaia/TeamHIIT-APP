@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team HIIT - Debug Localhost</title>
+    <style>
+        body {
+            font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #667eea;
+        }
+        .status {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .success { background: rgba(34,197,94,0.2); }
+        .error { background: rgba(239,68,68,0.2); }
+        .warning { background: rgba(245,158,11,0.2); }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover { background: #2563eb; }
+        .info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏋️</div>
+        <h1>Team HIIT - Debug Localhost</h1>
+        
+        <div id="status" class="status">
+            <h2>🔍 Verificando Status...</h2>
+            <p>Testando conexão com o servidor de desenvolvimento...</p>
+        </div>
+        
+        <div class="info">
+            <h3>📋 Informações do Sistema</h3>
+            <p><strong>URL:</strong> <span id="current-url"></span></p>
+            <p><strong>User Agent:</strong> <span id="user-agent"></span></p>
+            <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
+        </div>
+        
+        <div class="info">
+            <h3>🔧 Testes de Conectividade</h3>
+            <button onclick="testServer()">Testar Servidor</button>
+            <button onclick="testFirebase()">Testar Firebase</button>
+            <button onclick="testResources()">Testar Recursos</button>
+        </div>
+        
+        <div id="results" class="info" style="display: none;">
+            <h3>📊 Resultados dos Testes</h3>
+            <div id="test-results"></div>
+        </div>
+        
+        <div class="info">
+            <h3>🚀 Ações</h3>
+            <button onclick="openMainApp()">Abrir App Principal</button>
+            <button onclick="reloadPage()">Recarregar Página</button>
+            <button onclick="clearCache()">Limpar Cache</button>
+        </div>
+    </div>
+
+    <script>
+        // Atualizar informações básicas
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('timestamp').textContent = new Date().toLocaleString('pt-BR');
+        
+        // Função para atualizar status
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.innerHTML = `<h2>${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : '🔍'} ${message}</h2>`;
+        }
+        
+        // Função para adicionar resultado de teste
+        function addTestResult(test, status, details = '') {
+            const results = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${status}`;
+            resultDiv.innerHTML = `
+                <h4>${status === 'success' ? '✅' : status === 'error' ? '❌' : '⚠️'} ${test}</h4>
+                <p>${details}</p>
+            `;
+            results.appendChild(resultDiv);
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        // Testar servidor
+        async function testServer() {
+            updateStatus('Testando servidor...', 'info');
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    updateStatus('Servidor funcionando!', 'success');
+                    addTestResult('Servidor Local', 'success', `Status: ${response.status} - ${response.statusText}`);
+                } else {
+                    updateStatus('Servidor com problemas', 'warning');
+                    addTestResult('Servidor Local', 'warning', `Status: ${response.status} - ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus('Erro ao conectar com servidor', 'error');
+                addTestResult('Servidor Local', 'error', error.message);
+            }
+        }
+        
+        // Testar Firebase
+        async function testFirebase() {
+            updateStatus('Testando Firebase...', 'info');
+            try {
+                // Tentar carregar o script do Firebase
+                const response = await fetch('/src/firebaseConfig.js');
+                if (response.ok) {
+                    updateStatus('Firebase config encontrado!', 'success');
+                    addTestResult('Firebase Config', 'success', 'Arquivo de configuração carregado com sucesso');
+                } else {
+                    updateStatus('Firebase config não encontrado', 'warning');
+                    addTestResult('Firebase Config', 'warning', `Status: ${response.status}`);
+                }
+            } catch (error) {
+                updateStatus('Erro ao testar Firebase', 'error');
+                addTestResult('Firebase Config', 'error', error.message);
+            }
+        }
+        
+        // Testar recursos
+        async function testResources() {
+            updateStatus('Testando recursos...', 'info');
+            const resources = [
+                '/src/main.jsx',
+                '/src/App.jsx',
+                '/src/index.css',
+                '/public/LOGOS/ICONE-TH.png'
+            ];
+            
+            let successCount = 0;
+            
+            for (const resource of resources) {
+                try {
+                    const response = await fetch(resource);
+                    if (response.ok) {
+                        addTestResult(`Recurso: ${resource}`, 'success', `Status: ${response.status}`);
+                        successCount++;
+                    } else {
+                        addTestResult(`Recurso: ${resource}`, 'warning', `Status: ${response.status}`);
+                    }
+                } catch (error) {
+                    addTestResult(`Recurso: ${resource}`, 'error', error.message);
+                }
+            }
+            
+            if (successCount === resources.length) {
+                updateStatus('Todos os recursos funcionando!', 'success');
+            } else {
+                updateStatus(`${successCount}/${resources.length} recursos funcionando`, 'warning');
+            }
+        }
+        
+        // Abrir app principal
+        function openMainApp() {
+            window.location.href = '/';
+        }
+        
+        // Recarregar página
+        function reloadPage() {
+            window.location.reload();
+        }
+        
+        // Limpar cache
+        function clearCache() {
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                });
+            }
+            localStorage.clear();
+            sessionStorage.clear();
+            updateStatus('Cache limpo!', 'success');
+        }
+        
+        // Executar teste inicial
+        setTimeout(() => {
+            testServer();
+        }, 1000);
+    </script>
+</body>
+</html>

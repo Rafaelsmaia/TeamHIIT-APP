@@ -1,2 +1,58 @@
+/* Estilos responsivos para o projeto */
+
+/* Mobile First */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .text-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .hidden-mobile {
+    display: none;
+  }
+}
+
+/* Tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  .text-responsive {
+    font-size: 1rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+  .container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+  
+  .text-responsive {
+    font-size: 1.125rem;
+  }
+  
+  .hidden-desktop {
+    display: none;
+  }
+}
+
+/* PWA específico */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top, 44px);
+  }
+  
+  .pwa-header {
+    padding-top: env(safe-area-inset-top, 44px);
+  }
+}
 
 

@@ -1,0 +1,33 @@
+{
+  "name": "greenn-webhook-functions",
+  "version": "1.0.0",
+  "description": "Firebase Functions para processar webhooks da Greenn",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "preview-email": "node preview-email.js",
+    "send-email": "node send-email-manually.js"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.6.0",
+    "resend": "^6.4.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}

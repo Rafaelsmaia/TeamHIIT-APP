@@ -1,176 +1,164 @@
-/* PWA iOS Safe Area Fix - Versão Corrigida */
+/* PWA Safe Area Fix & Bottom Navigation - Todos os Dispositivos */
 
-/* Detectar se está rodando como PWA */
+/* Definir variáveis CSS para alturas base */
+:root {
+  --header-base-height: 3.5rem; /* Reduzido para 56px - altura mais compacta */
+  --bottom-nav-height: 3.5rem; /* Altura padrão da sua navegação inferior - reduzida */
+}
+
+/* Estilos padrão para a navegação inferior (sempre fixada na parte inferior) */
+.bottom-navigation {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 50 !important;
+  /* Background transparente - o fundo real está no container interno */
+  background-color: transparent !important;
+  /* Garantir que não há margens que possam empurrar para baixo */
+  margin: 0 !important;
+}
+
 @media (display-mode: standalone) {
-  
-  /* Remover padding do body que estava causando o espaço extra */
-  body {
-    padding-top: 0 !important;
-    padding-bottom: env(safe-area-inset-bottom) !important;
-    padding-left: env(safe-area-inset-left) !important;
-    padding-right: env(safe-area-inset-right) !important;
-    margin: 0 !important;
-  }
-  
-  /* Ajustar apenas o header para respeitar a safe area */
-  header {
-    padding-top: env(safe-area-inset-top) !important;
-    background-color: #111827 !important; /* Garantir que o fundo cubra a safe area */
-  }
-  
-  /* Garantir que o conteúdo principal comece logo após o header */
-  main,
-  .main-content,
-  .container:not(header .container) {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-  }
-  
-  /* Ajustar o root container */
-  #root {
-    min-height: 100vh;
-    padding-top: 0 !important;
-  }
-  
-  /* Garantir que elementos fixos respeitem a safe area */
-  .fixed-top {
-    top: env(safe-area-inset-top) !important;
-  }
-}
-
-/* Fallback para dispositivos iOS mais antigos sem suporte a env() */
-@media (display-mode: standalone) and (-webkit-min-device-pixel-ratio: 2) {
-  @supports not (padding-top: env(safe-area-inset-top)) {
-    header {
-      padding-top: 44px !important; /* Altura padrão da status bar iOS */
-    }
-  }
-}
-
-/* Ajustes específicos para diferentes modelos de iPhone */
-
-/* iPhone X, XS, 11 Pro */
-@media (display-mode: standalone) and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 44px !important;
-  }
-}
-
-/* iPhone XR, 11 */
-@media (display-mode: standalone) and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) {
-  header {
-    padding-top: 44px !important;
-  }
-}
-
-/* iPhone XS Max, 11 Pro Max */
-@media (display-mode: standalone) and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 44px !important;
-  }
-}
-
-/* iPhone 12 mini */
-@media (display-mode: standalone) and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 50px !important;
-  }
-}
-
-/* iPhone 12, 12 Pro, 13, 13 Pro, 14, 14 Pro */
-@media (display-mode: standalone) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 47px !important;
-  }
-}
-
-/* iPhone 12 Pro Max, 13 Pro Max, 14 Plus, 14 Pro Max */
-@media (display-mode: standalone) and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 47px !important;
-  }
-}
-
-/* iPhone 15, 15 Pro */
-@media (display-mode: standalone) and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 59px !important;
-  }
-}
-
-/* iPhone 15 Plus, 15 Pro Max */
-@media (display-mode: standalone) and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) {
-  header {
-    padding-top: 59px !important;
-  }
-}
-
-/* Garantir que o header tenha altura suficiente */
-@media (display-mode: standalone) {
-  header {
-    min-height: calc(64px + env(safe-area-inset-top, 44px));
-  }
-  
-  /* Ajustar o container do header para centralizar o conteúdo */
-  header .container {
-    padding-top: 0 !important;
-  }
-  
-  /* Garantir que o conteúdo da página comece imediatamente após o header */
-  body > div:first-child {
-    padding-top: 0 !important;
-  }
-}
-
-/* Classe utilitária para elementos que precisam respeitar safe area */
-.safe-area-top {
-  padding-top: env(safe-area-inset-top, 20px) !important;
-}
-
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 20px) !important;
-}
-
-.safe-area-left {
-  padding-left: env(safe-area-inset-left, 0px) !important;
-}
-
-.safe-area-right {
-  padding-right: env(safe-area-inset-right, 0px) !important;
-}
-
-/* Ajuste para viewport height considerando safe areas */
-.full-height-safe {
-  height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-}
-
-/* Correção específica para evitar espaço extra no topo */
-@media (display-mode: standalone) {
+  /* Reset básico para garantir que não há margens/padding indesejados */
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     overflow-x: hidden;
+    /* Altura total da viewport, incluindo a área do notch */
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+
+  /* Ajustar o root container para ocupar a altura total da tela */
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ajustar o header para respeitar a safe area no topo */
+  header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 50 !important;
+    /* Removido background-color fixo para permitir cores dinâmicas */
+    padding-top: env(safe-area-inset-top) !important;
+    height: calc(var(--header-base-height) + env(safe-area-inset-top)) !important; /* Altura total do header */
+    box-sizing: border-box; /* Garante que padding não aumente a altura total */
   }
   
-  /* Garantir que não há espaço extra acima do header */
-  body::before,
-  html::before {
-    display: none !important;
+  /* Garantir que o header use cores dinâmicas no PWA */
+  header.bg-white {
+    background-color: #ffffff !important;
   }
   
-  /* Remover qualquer margin/padding que possa estar causando o espaço */
-  * {
+  header.bg-gray-800 {
+    background-color: #1f2937 !important;
+  }
+
+  /* Ajustar o conteúdo principal para começar logo abaixo do header e respeitar a safe area inferior */
+  .main-content, .min-h-screen {
+    flex-grow: 1;
+    /* Padding-top reduzido para aproximar o conteúdo do header */
+    padding-top: calc(var(--header-base-height) + env(safe-area-inset-top) - 2rem) !important;
+    /* O padding-bottom deve ser a altura total da navegação inferior para empurrar o conteúdo */
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)) !important;
     box-sizing: border-box;
   }
+
+  /* Garantir que o container principal mantenha o padding correto */
+  .main-content-padding {
+    padding-top: calc(var(--header-base-height) + env(safe-area-inset-top) - 2rem) !important;
+    margin-top: 0 !important;
+  }
   
-  /* Garantir que o header seja o primeiro elemento visível */
-  header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
+  /* Forçar posicionamento correto da seção de saudação - aumentar espaçamento */
+  .main-content-padding > div:first-child {
+    margin-top: 0 !important;
+    padding-top: 1rem !important; /* Aumentado de 0.25rem para 1rem */
+  }
+  
+  /* Ajustes específicos para páginas individuais - reduzir espaçamento apenas nas páginas que não são Dashboard */
+  /* Profile - reduzir espaçamento mais agressivamente */
+  .main-content .container.mx-auto.px-6.py-8.pt-8 {
+    padding-top: calc(var(--header-base-height) + env(safe-area-inset-top) - 2.5rem) !important;
+  }
+  
+  /* Team HIIT - reduzir espaçamento mais agressivamente */
+  .main-content .pb-24.space-y-6 {
+    padding-top: calc(var(--header-base-height) + env(safe-area-inset-top) - 2.5rem) !important;
+  }
+  
+  /* Community - reduzir espaçamento mais agressivamente */
+  .main-content .container.mx-auto.px-4.md\\:px-6.py-8.max-w-2xl {
+    padding-top: calc(var(--header-base-height) + env(safe-area-inset-top) - 3rem) !important;
+    padding-bottom: 1rem !important;
+  }
+  
+  /* Dashboard - manter espaçamento original (não afetar) */
+  .main-content .px-6.pb-32.pt-16 {
+    padding-top: 1rem !important;
+  }
+  
+  /* Remover padding-top apenas de elementos específicos que causam problemas */
+  .pt-16, .pt-12, .pt-8 {
+    padding-top: 0 !important;
+  }
+
+  /* Ajustes específicos para a BottomNavigation no modo PWA */
+  .bottom-navigation {
+    /* Garantir que a navegação fique na parte inferior da tela */
+    bottom: 0 !important;
+    /* IMPORTANTE: Forçar visibilidade em modo PWA standalone, incluindo iPads */
+    display: block !important;
+  }
+  
+  /* Garantir que a navegação seja visível em tablets (iPads) no modo PWA */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .bottom-navigation {
+      display: block !important;
+    }
   }
 }
 
+/* Estilos para TODOS os dispositivos (incluindo desktop) */
+.bottom-navigation {
+  display: block !important;
+}
+
+/* Garantir que o conteúdo não fique escondido atrás da navegação em desktop */
+@media (min-width: 1024px) {
+  .bottom-navigation {
+    /* Centralizar navegação em desktop */
+    display: flex !important;
+    justify-content: center !important;
+  }
+  
+  /* Adicionar padding-bottom ao conteúdo em desktop também */
+  .main-content, .min-h-screen {
+    padding-bottom: calc(var(--bottom-nav-height) + 1rem) !important;
+  }
+}
+
+@media (display-mode: standalone) {
+  /* Fallback para dispositivos iOS mais antigos sem suporte a env() */
+  @supports not (padding-top: env(safe-area-inset-top)) {
+    header {
+      padding-top: 44px !important; /* Altura padrão da status bar iOS */
+      height: calc(var(--header-base-height) + 44px) !important;
+    }
+    .main-content, .min-h-screen {
+      padding-top: calc(var(--header-base-height) + 44px - 32px) !important;
+      padding-bottom: calc(var(--bottom-nav-height) + 34px) !important; /* 34px é a safe area inferior padrão */
+    }
+    .bottom-navigation {
+      padding-bottom: 34px !important;
+      height: calc(var(--bottom-nav-height) + 34px) !important;
+    }
+  }
+}
