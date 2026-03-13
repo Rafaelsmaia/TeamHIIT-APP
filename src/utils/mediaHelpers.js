@@ -1,5 +1,7 @@
 export const encodeImageUrl = (url) => {
   if (!url) return '';
+  // URLs absolutas (Firebase Storage, etc.) não devem receber prefixo nem alteração
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
 
   let normalized = url.startsWith('/') ? url : `/${url}`;
   normalized = normalized.replace(/^\/CAPAS TEAM HIIT/, '/IMAGES/CAPAS TEAM HIIT');

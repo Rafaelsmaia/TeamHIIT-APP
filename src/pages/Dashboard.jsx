@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Clock, Flame } from 'lucide-react';
+import { Play, Clock, Flame, Headphones } from 'lucide-react';
 import ProfilePhoto from '../components/ProfilePhoto.jsx';
 import FireCircle from '../components/FireCircle.jsx';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 import progressManager from '../utils/ProgressManager.js';
 import { preloadTrainingsData, useTrainingsData } from '../hooks/useTrainingsData.js';
 import { useTheme } from '../contexts/ThemeContext.jsx';
@@ -28,16 +30,54 @@ function Dashboard() {
   
   // Proteção contra carregamento múltiplo
   const [isLoadingProgress, setIsLoadingProgress] = useState(false);
-  
+  const [firestoreImages, setFirestoreImages] = useState({});
+
   const { data: trainingsData } = useTrainingsData();
-  
+
+  // Buscar imagens (banner/capa) do Firestore para sobrescrever trainings.js
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, 'trainings'));
+        if (cancelled) return;
+        const map = {};
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          if (data.id) map[data.id] = { bannerImageUrl: data.bannerImageUrl, imageUrl: data.imageUrl };
+        });
+        setFirestoreImages(map);
+      } catch (e) {
+        console.warn('Dashboard: erro ao carregar imagens do Firestore', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const dataForDisplay = useMemo(() => {
+    if (!trainingsData?.sections) return trainingsData;
+    return {
+      ...trainingsData,
+      sections: trainingsData.sections.map((s) => ({
+        ...s,
+        trainings: (s.trainings || []).map((t) => {
+          const overrides = firestoreImages[t.id] || {};
+          const merged = { ...t };
+          if (overrides.bannerImageUrl) merged.bannerImageUrl = overrides.bannerImageUrl;
+          if (overrides.imageUrl) merged.imageUrl = overrides.imageUrl;
+          return merged;
+        }),
+      })),
+    };
+  }, [trainingsData, firestoreImages]);
+
   const getNextVideoForTrainingFixed = useCallback(
     (trainingId, progress, context) => {
-      if (!trainingId || !progress || !trainingsData?.sections) {
+      if (!trainingId || !progress || !dataForDisplay?.sections) {
         return null;
       }
 
-      const matches = findTrainingMatches(trainingId, trainingsData);
+      const matches = findTrainingMatches(trainingId, dataForDisplay);
       if (!matches.length) {
         return null;
       }
@@ -70,19 +110,19 @@ function Dashboard() {
 
       return null;
     },
-    [trainingsData]
+    [dataForDisplay]
   );
 
   const getActiveModules = useCallback(
     (progress) => {
-      if (!progress || !trainingsData?.sections) {
+      if (!progress || !dataForDisplay?.sections) {
         return [];
       }
 
       const context = buildProgressContext(progress);
       const modules = [];
 
-      trainingsData.sections.forEach((section) => {
+      dataForDisplay.sections.forEach((section) => {
         section.trainings?.forEach((training) => {
           if (!training?.modules || training.modules.length === 0) {
             return;
@@ -123,6 +163,7 @@ function Dashboard() {
             trainingId: training.id,
             trainingTitle: training.title,
             imageUrl:
+              training.bannerImageUrl ||
               nextVideo.imageUrl ||
               training.coverImage ||
               training.bannerImage ||
@@ -145,7 +186,7 @@ function Dashboard() {
 
       return modules;
     },
-    [trainingsData, getNextVideoForTrainingFixed]
+    [dataForDisplay, getNextVideoForTrainingFixed]
   );
 
   const getActiveModulesForCarousel = useCallback(() => {
@@ -357,7 +398,7 @@ function Dashboard() {
       },
       duration: nextVideo.duration,
       calories: nextVideo.calories,
-      imageUrl: nextVideo.imageUrl || pickImageSource(targetTraining),
+      imageUrl: targetTraining.bannerImageUrl || nextVideo.imageUrl || pickImageSource(targetTraining),
       isComeceAqui: true,
       completedVideos,
       lastAccessDate: lastAccess ? new Date(lastAccess) : undefined,
@@ -380,9 +421,9 @@ function Dashboard() {
 
   // Função para encontrar o primeiro vídeo de um módulo (ignorando apresentação)
   const getFirstVideoId = (trainingId) => {
-    if (!trainingsData?.sections) return null;
+    if (!dataForDisplay?.sections) return null;
     
-    for (const section of trainingsData.sections) {
+    for (const section of dataForDisplay.sections) {
       const training = section.trainings.find(t => t.id === trainingId);
       if (training && training.modules && training.modules.length > 0) {
         // Encontrar o primeiro módulo que não seja apresentação
@@ -804,13 +845,13 @@ function Dashboard() {
         </div>
 
         {/* 3. Today's Workout Section - Carrossel */}
-        <div className="mb-4">
-          <div className="mb-3">
+        <div className="mb-4 -mx-6">
+          <div className="mb-3 px-6">
             <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Treinos para hoje</h2>
           </div>
           
           {loading ? (
-            <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-blue-500'} rounded-xl shadow-lg p-6 text-center`}>
+            <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-blue-500'} rounded-xl shadow-lg p-6 text-center mx-6`}>
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
               <p className="text-white">Carregando seus treinos...</p>
             </div>
@@ -857,38 +898,74 @@ function Dashboard() {
             });
             
             if (carouselItems.length > 0) {
+              // Função para calcular progresso do módulo
+              const getModuleProgress = (item) => {
+                if (!trainingsData?.sections || !userProgress) return 0;
+                
+                const context = buildProgressContext(userProgress);
+                let totalVideos = 0;
+                let completedVideos = 0;
+                
+                trainingsData.sections.forEach((section) => {
+                  section.trainings?.forEach((training) => {
+                    if (training.id === item.trainingId) {
+                      const videos = extractTrainingVideos(training);
+                      totalVideos = videos.length;
+                      completedVideos = videos.reduce((count, video) => {
+                        return hasCompletedVideo(context, training.id, video.moduleId, video.videoId) ? count + 1 : count;
+                      }, 0);
+                    }
+                  });
+                });
+                
+                return totalVideos > 0 ? (completedVideos / totalVideos) * 100 : 0;
+              };
+
               return (
-                <div className="overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
-                    {carouselItems.map((item, index) => (
-                      <div
-                        key={`${item.trainingId}-${index}`}
-                        className={`relative rounded-2xl overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 flex-shrink-0 w-80 h-48 ${
-                          index === carouselItems.length - 1 ? 'mr-4' : ''
-                        }`}
-                        onClick={() => {
-                          if (item.isComeceAqui) {
-                            // Navegar direto para o video player dedicado do "Comece por aqui"
-                            // Usar a rota do video player dedicado com o primeiro vídeo
-                            // Forçar navegação com replace para evitar cache
-                            navigate('/player/comece-aqui/f7KNh2jRf5I', { replace: true });
-                          } else {
-                            // Navegar para módulo em progresso - direto para video player dedicado
-                            
-                            if (item.nextVideo) {
-                              navigate(`/player/${item.trainingId}/${item.nextVideo.videoId}`, { replace: true });
-                            } else {
-                              // Se não há próximo vídeo, encontrar o primeiro vídeo do módulo
-                              const firstVideoId = getFirstVideoId(item.trainingId);
-                              if (firstVideoId) {
-                                navigate(`/player/${item.trainingId}/${firstVideoId}`, { replace: true });
+                <div 
+                  className="overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+                  style={{ 
+                    scrollBehavior: 'smooth',
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  <div className="flex pb-4" style={{ width: 'max-content' }}>
+                    {carouselItems.map((item, index) => {
+                      const moduleProgress = getModuleProgress(item);
+                      const completedCount = item.completedVideos || 0;
+                      
+                      return (
+                        <div
+                          key={`${item.trainingId}-${index}`}
+                          className="flex-shrink-0 snap-center snap-always"
+                          style={{
+                            width: 'calc(100vw - 3rem)',
+                            maxWidth: 'calc(100vw - 3rem)',
+                            marginLeft: index === 0 ? '1.5rem' : '1rem',
+                            marginRight: index === carouselItems.length - 1 ? '1.5rem' : '1rem'
+                          }}
+                        >
+                          {/* Card do Treino */}
+                          <div
+                            className={`relative rounded-2xl overflow-hidden cursor-pointer mb-3 shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                            style={{ height: '14rem' }}
+                            onClick={() => {
+                              if (item.isComeceAqui) {
+                                navigate('/player/comece-aqui/f7KNh2jRf5I', { replace: true });
                               } else {
-                                navigate('/dashboard');
+                                if (item.nextVideo) {
+                                  navigate(`/player/${item.trainingId}/${item.nextVideo.videoId}`, { replace: true });
+                                } else {
+                                  const firstVideoId = getFirstVideoId(item.trainingId);
+                                  if (firstVideoId) {
+                                    navigate(`/player/${item.trainingId}/${firstVideoId}`, { replace: true });
+                                  } else {
+                                    navigate('/dashboard');
+                                  }
+                                }
                               }
-                            }
-                          }
-                        }}
-                      >
+                            }}
+                          >
                         {/* Banner Background */}
                         <div className="relative h-full">
                           <img
@@ -900,61 +977,115 @@ function Dashboard() {
                             }}
                           />
                           
-                          {/* Overlay sutil para destacar textos */}
-                          <div className="absolute inset-0 bg-black/20"></div>
-                          
-                          {/* Gradiente inferior para destacar informações */}
-                          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                          
                           {/* Informações sobrepostas */}
-                          <div className="absolute inset-0 p-6 pb-4 flex flex-col justify-between">
-                            {/* Top Section - Descrição e Título */}
-                            <div className="flex flex-col justify-start">
-                              <span className="bg-blue-500/90 text-white px-3 py-1 rounded-full text-sm font-medium inline-block w-fit mb-2">
+                          <div className="absolute inset-0 p-6 pb-4 flex flex-col justify-end">
+                            {/* Badge no topo */}
+                            <div className="absolute top-6 left-6">
+                              <span className="bg-blue-500/90 text-white px-3 py-1 rounded-full text-sm font-medium inline-block w-fit">
                                 {item.isComeceAqui ? "Primeiro Passo" : 
                                  item.nextVideo ? item.nextVideo.moduleTitle : 
                                  "Continue Assistindo"}
                               </span>
-                              <div className="text-2xl font-bold text-white overflow-hidden">
-                                <div 
-                                  className={`${item.trainingTitle.length > 20 ? 'animate-marquee' : ''}`}
-                                >
-                                  {item.trainingTitle}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Middle Section - Espaço vazio para centralizar */}
-                            <div className="flex-1"></div>
-                            
-                            {/* Bottom Section - Tempo, Calorias e Botão Play */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                <div className="flex items-center text-white">
-                                  <Clock className="w-5 h-5 mr-2 text-blue-400" />
-                                  <span className="font-medium">
-                                    {item.duration}
-                                  </span>
-                                </div>
-                                <div className="flex items-center text-white">
-                                  <Flame className="w-5 h-5 mr-2 text-blue-400" />
-                                  <span className="font-medium">
-                                    {item.calories || "300-500 kcal"}
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              {/* Botão Play - Menor */}
-                              <div className="flex items-center">
-                                <div className="w-9 h-9 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110">
-                                  <Play className="w-4 h-4 text-white fill-white ml-0.5" />
-                                </div>
-                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                          </div>
+
+                          {/* Widgets abaixo do card */}
+                          <div className="flex gap-3">
+                            {/* Widget 1: Progresso do Módulo */}
+                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-50'} rounded-xl p-4 flex flex-col items-center justify-center shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                              <p className={`text-xs font-bold mb-2 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                Progresso do Módulo
+                              </p>
+                              <div className="relative w-16 h-16">
+                                <svg className="w-16 h-16 transform -rotate-90">
+                                  <circle
+                                    cx="32"
+                                    cy="32"
+                                    r="28"
+                                    stroke={isDarkMode ? '#374151' : '#dbeafe'}
+                                    strokeWidth="6"
+                                    fill="none"
+                                  />
+                                  <circle
+                                    cx="32"
+                                    cy="32"
+                                    r="28"
+                                    stroke="#3b82f6"
+                                    strokeWidth="6"
+                                    fill="none"
+                                    strokeDasharray={`${2 * Math.PI * 28}`}
+                                    strokeDashoffset={`${2 * Math.PI * 28 * (1 - moduleProgress / 100)}`}
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {Math.round(moduleProgress)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Widget 2: Tempo do Treino */}
+                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-100'} rounded-xl p-4 flex flex-col items-center justify-center`}>
+                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2">
+                                <Clock className="w-5 h-5 text-blue-500" />
+                              </div>
+                              <p className={`text-lg font-extrabold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.duration}
+                              </p>
+                              <p className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                Tempo do Treino
+                              </p>
+                            </div>
+
+                            {/* Widget 3: Calorias do Treino */}
+                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-100'} rounded-xl p-4 flex flex-col items-center justify-center`}>
+                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2">
+                                <Flame className="w-5 h-5 text-blue-500" />
+                              </div>
+                              <p className={`text-lg font-extrabold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {item.calories ? item.calories.replace(' kcal', '') : '300-500'}
+                              </p>
+                              <p className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                Calorias do Treino
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Botão Iniciar Treino */}
+                          <button
+                            style={{ marginTop: '1.5rem' }}
+                            onClick={() => {
+                              if (item.isComeceAqui) {
+                                navigate('/player/comece-aqui/f7KNh2jRf5I', { replace: true });
+                              } else {
+                                if (item.nextVideo) {
+                                  navigate(`/player/${item.trainingId}/${item.nextVideo.videoId}`, { replace: true });
+                                } else {
+                                  const firstVideoId = getFirstVideoId(item.trainingId);
+                                  if (firstVideoId) {
+                                    navigate(`/player/${item.trainingId}/${firstVideoId}`, { replace: true });
+                                  } else {
+                                    navigate('/dashboard');
+                                  }
+                                }
+                              }
+                            }}
+                            className={`w-full ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} rounded-full py-4 px-6 flex items-center justify-center gap-2 transition-all duration-300 hover:opacity-90 active:scale-95`}
+                          >
+                            <span className="text-base font-bold text-white">
+                              Iniciar treino
+                            </span>
+                            <span className="text-lg font-bold text-white">
+                              →
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -1018,15 +1149,30 @@ function Dashboard() {
         </div>
 
         {/* Meu Progresso - Carrossel de Métricas */}
-        <div className="mb-4">
-          <div className="mb-4">
+        <div className="mb-4 -mx-6">
+          <div className="mb-4 px-6">
             <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Meu Progresso</h2>
           </div>
           
         {/* Carrossel de Métricas */}
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide mb-8">
+        <div 
+          className="overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+          style={{ 
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
+          <div className="flex pb-4" style={{ width: 'max-content' }}>
             {/* Métrica 1: Calorias Queimadas */}
-            <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 min-w-[320px] flex-shrink-0 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+            <div 
+              className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 flex-shrink-0 snap-center snap-always border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}
+              style={{
+                width: 'calc(100vw - 3rem)',
+                maxWidth: 'calc(100vw - 3rem)',
+                marginLeft: '1.5rem',
+                marginRight: '1rem'
+              }}
+            >
               {/* Header com Total */}
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
@@ -1156,7 +1302,15 @@ function Dashboard() {
             </div>
 
             {/* Métrica 2: Tempo de Treino */}
-            <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 min-w-[320px] flex-shrink-0 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'} mr-4`}>
+            <div 
+              className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 flex-shrink-0 snap-center snap-always border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}
+              style={{
+                width: 'calc(100vw - 3rem)',
+                maxWidth: 'calc(100vw - 3rem)',
+                marginLeft: '1rem',
+                marginRight: '1.5rem'
+              }}
+            >
               {/* Header com Total */}
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
@@ -1284,8 +1438,47 @@ function Dashboard() {
             </div>
           </div>
         </div>
+        </div>
 
         <HabitTrackerSection currentUser={currentUser} isDarkMode={isDarkMode} addToast={addToast} />
+
+        {/* Container de Suporte */}
+        <div className="mt-6 mb-6 -mx-6">
+          <div 
+            className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}
+            style={{
+              width: 'calc(100vw - 3rem)',
+              maxWidth: 'calc(100vw - 3rem)',
+              marginLeft: '1.5rem',
+              marginRight: '1rem'
+            }}
+          >
+            <div className="flex items-center gap-4">
+              {/* Ícone de Fone de Ouvido */}
+              <div className={`w-16 h-16 ${isDarkMode ? 'bg-orange-900/30' : 'bg-orange-50'} rounded-full flex items-center justify-center flex-shrink-0`}>
+                <Headphones className={`w-8 h-8 ${isDarkMode ? 'text-orange-500' : 'text-orange-600'}`} />
+              </div>
+
+              {/* Texto e Link */}
+              <div className="flex-1">
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mb-2`}>
+                  <span className="font-bold">Precisa de ajuda?</span> Estamos sempre
+                </p>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mb-3`}>
+                  aqui para ajudar.
+                </p>
+                <a
+                  href="https://wa.me/5511994252678"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1 text-sm font-medium ${isDarkMode ? 'text-orange-500 hover:text-orange-400' : 'text-orange-600 hover:text-orange-700'} transition-colors`}
+                >
+                  Falar com suporte →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Bottom Navigation */}
@@ -1489,6 +1682,11 @@ function safeCalories(calories, duration, videoId) {
 }
 
 function pickImageSource(training, module, video) {
+  // Para listagem no Dashboard (carrossel "Treinos para hoje") usamos bannerImageUrl quando existir
+  const forDashboard = !module && !video;
+  if (forDashboard && training?.bannerImageUrl) {
+    return training.bannerImageUrl;
+  }
   return (
     video?.thumbnail ||
     video?.coverImage ||

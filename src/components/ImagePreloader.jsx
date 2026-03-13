@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 import SplashScreen from './SplashScreen.jsx';
 
 // Cache global para imagens pré-carregadas
@@ -16,15 +18,24 @@ const ImagePreloader = ({ children, onLoadComplete, showSplash = true }) => {
       window.trainingsData.sections.forEach(section => {
         section.trainings.forEach(training => {
           if (training.imageUrl) {
-            // Codificar URL para funcionar no PWA
-            imageUrls.add(encodeURI(`/${training.imageUrl}`));
+            const url = training.imageUrl;
+            // URLs absolutas (Firebase, CDN) vão direto; caminhos relativos recebem prefixo "/"
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+              imageUrls.add(url);
+            } else {
+              imageUrls.add(encodeURI(`/${url}`));
+            }
           }
           // Também carregar thumbnails dos vídeos se existirem
           if (training.modules) {
             training.modules.forEach(module => {
               if (module.thumbnail) {
-                // Codificar URL para funcionar no PWA
-                imageUrls.add(encodeURI(`/${module.thumbnail}`));
+                const thumb = module.thumbnail;
+                if (thumb.startsWith('http://') || thumb.startsWith('https://')) {
+                  imageUrls.add(thumb);
+                } else {
+                  imageUrls.add(encodeURI(`/${thumb}`));
+                }
               }
             });
           }
@@ -63,16 +74,22 @@ const ImagePreloader = ({ children, onLoadComplete, showSplash = true }) => {
       window.trainingsData.sections.forEach(section => {
         section.trainings.forEach(training => {
           if (training.imageUrl) {
-            // Codificar URL para funcionar no PWA
-            const encodedUrl = encodeURI(`/${training.imageUrl}`);
-            trainingImages.push(encodedUrl);
+            const url = training.imageUrl;
+            const finalUrl =
+              url.startsWith('http://') || url.startsWith('https://')
+                ? url
+                : encodeURI(`/${url}`);
+            trainingImages.push(finalUrl);
           }
           if (training.modules) {
             training.modules.forEach(module => {
               if (module.thumbnail) {
-                // Codificar URL para funcionar no PWA
-                const encodedUrl = encodeURI(`/${module.thumbnail}`);
-                trainingImages.push(encodedUrl);
+                const thumb = module.thumbnail;
+                const finalThumb =
+                  thumb.startsWith('http://') || thumb.startsWith('https://')
+                    ? thumb
+                    : encodeURI(`/${thumb}`);
+                trainingImages.push(finalThumb);
               }
             });
           }
@@ -133,6 +150,24 @@ const ImagePreloader = ({ children, onLoadComplete, showSplash = true }) => {
     };
     
     try {
+      // Incluir capas vindas do Firestore (inclusive módulos criados no painel admin)
+      try {
+        const snap = await getDocs(collection(db, 'trainings'));
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const urls = [data.imageUrl, data.bannerImageUrl].filter(Boolean);
+          urls.forEach((url) => {
+            const finalUrl =
+              typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))
+                ? url
+                : encodeURI(`/${url}`);
+            trainingImages.push(finalUrl);
+          });
+        });
+      } catch (e) {
+        console.warn('⚠️ ImagePreloader: erro ao buscar imagens do Firestore', e);
+      }
+
       // Carregar PRIMEIRO as imagens dos treinos com prioridade máxima
       // Carregar imagens dos treinos em lotes menores para máxima velocidade
       const trainingBatches = [];

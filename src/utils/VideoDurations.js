@@ -352,15 +352,15 @@ export const VIDEO_CALORIES = {
   'KIaDnSRcoC8': 250, // 19 min - Treino 6
 
   // PROJETO VERÃO
-  'nNw3I_x5VfA': 600, // 21 min
-  'dguwzqWv8J0': 450, // 18 min
-  'IwDC3yAnLvE': 450, // 19 min
-  '1_jzxLkuM_c': 600, // 23 min
-  'h_D85tk5Xtc': 450, // 18 min
-  'KmVOQI1eQJA': 450, // 17 min
-  'b36K_GtmarM': 600, // 21 min
-  'KFixxjv9aHA': 250, // 13 min
-  'hrlFlNBBxbs': 250, // 16 min
+  'nNw3I_x5VfA': 450, // 21 min (21-30 min = 450 kcal)
+  'dguwzqWv8J0': 250, // 18 min (11-20 min = 250 kcal)
+  'IwDC3yAnLvE': 250, // 19 min (11-20 min = 250 kcal)
+  '1_jzxLkuM_c': 450, // 23 min (21-30 min = 450 kcal)
+  'h_D85tk5Xtc': 250, // 18 min (11-20 min = 250 kcal)
+  'KmVOQI1eQJA': 250, // 17 min (11-20 min = 250 kcal)
+  'b36K_GtmarM': 450, // 21 min (21-30 min = 450 kcal)
+  'KFixxjv9aHA': 250, // 13 min (11-20 min = 250 kcal)
+  'hrlFlNBBxbs': 250, // 16 min (11-20 min = 250 kcal)
 
   // DESAFIO SUPER INTENSO - 6 treinos
   'KuaeMLiUdpY': 600, // 39 min - Treino 1

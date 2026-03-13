@@ -63,21 +63,28 @@ window.trainingsData = {
         {
           id: "4kg-em-14-dias",
           title: "4KG EM 14 DIAS",
-          duration: "Em breve",
+          duration: "6 treinos",
           level: "Intermediário",
           categories: ["Cardio HIIT"],
           imageUrl: "IMAGES/CAPAS DOS MODULOS/4KG-EM-14-DIAS.jpg.jpeg",
-          comingSoon: true,
-          modules: []
+          modules: [
+            { title: "Apresentação 4KG em 14 Dias", videoUrl: "https://youtu.be/PIbkPjBfTRs" },
+            { title: "Treino 1", videoUrl: "https://youtu.be/yFEy-61b_uA" },
+            { title: "Treino 2", videoUrl: "https://youtu.be/mU4JTEgYFKs" },
+            { title: "Treino 3", videoUrl: "https://youtu.be/xcKNaLGMjkk" },
+            { title: "Treino 4", videoUrl: "https://youtu.be/HQZakZZpdC4" },
+            { title: "Treino 5", videoUrl: "https://youtu.be/0ZmnVn4ygzo" },
+            { title: "Treino 6", videoUrl: "https://youtu.be/6og5i9gFzbE" }
+          ]
         },
         {
           id: "intenso-adaptado",
           title: "INTENSO ADAPTADO",
-          duration: "Em breve",
+          duration: "32 treinos",
           level: "Intermediário",
           categories: ["Cardio HIIT"],
           imageUrl: "IMAGES/CAPAS DOS MODULOS/INTENSO-&-ADAPTADO.jpg.jpeg",
-          comingSoon: true,
+          comingSoon: false,
           modules: []
         }
       ]

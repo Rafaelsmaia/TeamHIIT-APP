@@ -24,6 +24,7 @@ const TeamHIIT = () => {
   
   // Estados principais
   const [user, setUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Usar o hook personalizado para carregar dados dos treinos
   const { data: trainingsData, loading: trainingsLoading } = useTrainingsData();
@@ -60,6 +61,18 @@ const TeamHIIT = () => {
                    training.title !== "CANAIS DE SUPORTE"
     ) || []
   })) || [];
+
+  const filteredSections = sectionsToDisplay.map((section) => ({
+    ...section,
+    trainings: section.trainings.filter((training) => {
+      if (!searchTerm.trim()) return true;
+      const query = searchTerm.toLowerCase();
+      return (
+        training.title?.toLowerCase().includes(query) ||
+        training.id?.toLowerCase().includes(query)
+      );
+    }),
+  })).filter((section) => section.trainings.length > 0);
 
   // Carregar dados do usuário
   const loadUserData = async (userId) => {
@@ -323,9 +336,23 @@ const TeamHIIT = () => {
       
       <div className="main-content pt-[4.5rem] pb-32">
         <div className="space-y-6">
+          <div className="px-6 mt-2">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl shadow-md border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} px-4 py-3 flex items-center gap-3`}>
+              <Search className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar módulo por nome ou ID..."
+                className={`flex-1 bg-transparent outline-none text-sm ${
+                  isDarkMode ? 'text-white placeholder-gray-400' : 'text-gray-900 placeholder-gray-500'
+                }`}
+              />
+            </div>
+          </div>
           
           {/* Seções de Treinos */}
-          {sectionsToDisplay.map((section, sectionIndex) => (
+          {filteredSections.map((section, sectionIndex) => (
             <div key={section.id}>
               <div className="px-6">
                 <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
@@ -342,7 +369,7 @@ const TeamHIIT = () => {
                     {section.trainings.map((training, trainingIndex) => (
                       <div
                         key={training.id}
-                        className={`relative rounded-xl shadow-lg overflow-hidden transform transition-transform duration-300 flex-shrink-0 w-48 md:w-auto aspect-[3/4] ${
+                        className={`relative rounded-xl shadow-lg overflow-hidden transform transition-transform duration-300 flex-shrink-0 w-40 md:w-auto aspect-[3/4] ${
                           training.comingSoon 
                             ? 'cursor-not-allowed opacity-90' 
                             : 'cursor-pointer hover:scale-105 hover:shadow-xl'
@@ -353,7 +380,7 @@ const TeamHIIT = () => {
                         {/* Imagem de fundo cobrindo todo o card */}
                         <div className="absolute inset-0 w-full h-full">
                           <InstantImage
-                            src={training.imageUrl ? `/${training.imageUrl}` : "/IMAGES/CAPAS TEAM HIIT/capa TH.png"}
+                            src={training.imageUrl || "/IMAGES/CAPAS TEAM HIIT/capa TH.png"}
                             alt={training.title}
                             className="w-full h-full"
                             style={{ objectFit: 'cover', objectPosition: 'center' }}

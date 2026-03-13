@@ -23,6 +23,8 @@ import { useTheme } from '../contexts/ThemeContext.jsx';
 import progressManager from '../utils/ProgressManager.js';
 import { getVideoDuration } from '../utils/VideoDurations.js';
 import { calculateCaloriesRange } from '../utils/VideoUtils.js';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
 // Estilos CSS para animação do fogo
 const fireAnimation = `
@@ -84,7 +86,6 @@ function VideoPlayerDedicated() {
   const [isLightingUp, setIsLightingUp] = useState(false);
   const [isExtinguishing, setIsExtinguishing] = useState(false);
   const [manualInteraction, setManualInteraction] = useState(false); // Controla se o usuário interagiu manualmente
-  const [showNextTrainings, setShowNextTrainings] = useState(false);
   
   const videoRef = useRef(null);
   const playlistRef = useRef(null);
@@ -111,8 +112,72 @@ function VideoPlayerDedicated() {
       setLoading(false);
     }, 10000); // 10 segundos de timeout
     
-    const fetchVideoData = () => {
+    const fetchVideoData = async () => {
       
+      // 1) Tentar buscar treino e módulos direto do Firestore
+      try {
+        const q = query(collection(db, 'trainings'), where('id', '==', trainingId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          const fsTraining = { firestoreId: doc.id, ...doc.data() };
+
+          if (Array.isArray(fsTraining.modules) && fsTraining.modules.length > 0) {
+            clearTimeout(timeoutId);
+            const categoryLabel = fsTraining.categories?.[0] || 'Treino';
+
+            const processedVideos = fsTraining.modules.map((module, index) => {
+              const youtubeId = module.videoUrl ? getYouTubeVideoId(module.videoUrl) : module.youtubeId;
+              const realDuration = getVideoDuration(youtubeId);
+
+              return {
+                id: `modulo-${index + 1}`,
+                title: module.title,
+                description: `${fsTraining.title} - ${module.title}`,
+                videoUrl: module.videoUrl || (module.youtubeId ? `https://youtu.be/${module.youtubeId}` : null),
+                youtubeId,
+                duration: realDuration,
+                type: categoryLabel,
+                moduleIndex: index,
+              };
+            });
+
+            const filteredVideos = processedVideos.filter((video) => {
+              const isPresentation = video.title && video.title.toLowerCase().includes('apresentação');
+              return video.youtubeId && !isPresentation;
+            });
+
+            setTraining(fsTraining);
+            setAllVideos(filteredVideos);
+
+            let currentIndex = 0;
+            if (videoId) {
+              currentIndex = filteredVideos.findIndex((v) => v.youtubeId === videoId);
+            }
+            if (currentIndex < 0) currentIndex = 0;
+            setCurrentVideoIndex(currentIndex);
+
+            const currentVideo = filteredVideos[currentIndex];
+            if (currentVideo) {
+              setVideoData({
+                title: currentVideo.title,
+                videoUrl: currentVideo.videoUrl,
+                youtubeId: currentVideo.youtubeId,
+                duration: currentVideo.duration,
+                description: currentVideo.description || 'Treino completo do Team HIIT',
+                type: currentVideo.type || 'Treino',
+              });
+            }
+
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ VideoPlayerDedicated: erro ao carregar treino do Firestore, usando trainings.js como fallback', e);
+      }
+
+      // 2) Fallback: usar dados já carregados globalmente (trainings.js)
       // Se os dados já estão carregados globalmente, usar diretamente
       if (window.trainingsData && window.trainingsData.sections) {
         let foundTraining = null;
@@ -742,87 +807,74 @@ function VideoPlayerDedicated() {
       {/* Próximos Treinos */}
       <div className="mt-8">
         <div className="bg-white rounded-lg shadow-lg p-4">
-          <div 
-            className="cursor-pointer"
-            onClick={() => setShowNextTrainings(!showNextTrainings)}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Próximos treinos</h3>
-              <ChevronRight 
-                className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${
-                  showNextTrainings ? 'rotate-90' : ''
-                }`} 
-              />
-            </div>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Próximos treinos</h3>
           </div>
           
-          {showNextTrainings && (
-            <div className="mt-4 space-y-3">
-              {allVideos.map((video, index) => {
-                const isCompleted = progressManager.isVideoCompleted(
-                  trainingId, 'default', video.youtubeId
-                );
-                
-                // Log temporário para debug
-                if (index === 0) {
-                  console.log('🔍 [VideoPlayerDedicated] Primeiro vídeo na lista de próximos treinos:', {
-                    trainingId,
-                    videoId: video.id,
-                    youtubeId: video.youtubeId,
-                    videoTitle: video.title,
-                    isCompleted,
-                    videoKey: `${trainingId}-${video.youtubeId}-${video.youtubeId}`,
-                  });
+          <div className="space-y-3">
+            {allVideos.map((video, index) => {
+              const isCompleted = progressManager.isVideoCompleted(
+                trainingId, 'default', video.youtubeId
+              );
+              
+              // Log temporário para debug
+              if (index === 0) {
+                console.log('🔍 [VideoPlayerDedicated] Primeiro vídeo na lista de próximos treinos:', {
+                  trainingId,
+                  videoId: video.id,
+                  youtubeId: video.youtubeId,
+                  videoTitle: video.title,
+                  isCompleted,
+                  videoKey: `${trainingId}-${video.youtubeId}-${video.youtubeId}`,
+                });
 
-                  // Verificar progresso atual
-                  const progress = progressManager.getProgress();
-                  console.log('🔍 [VideoPlayerDedicated] Progresso atual ao montar próximos treinos:', progress);
-                }
-                
-                return (
-                  <div 
-                    key={video.id}
-                    className="bg-gray-50 rounded-lg p-4 flex items-center space-x-4 hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200"
-                    onClick={() => {
-                      // Navegar para a URL específica do vídeo
-                      navigate(`/player/${trainingId}/${video.youtubeId}`);
-                      setShowNextTrainings(false);
-                    }}
-                  >
-                    {/* Capa do vídeo */}
-                    <div className="w-16 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
-                      <img 
-                        src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    
-                    {/* Nome do treino */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-gray-900 font-medium truncate">{video.title}</h4>
-                      <p className="text-gray-600 text-sm truncate">{video.description}</p>
-                    </div>
-                    
-                    {/* Status de conclusão */}
-                    <div className="flex-shrink-0">
-                      <div 
-                        className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                          isCompleted 
-                            ? 'bg-blue-500' 
-                            : 'bg-gray-300 border-2 border-gray-400'
-                        }`}
-                      >
-                        {isCompleted && (
-                          <Check className="w-4 h-4 text-white" />
-                        )}
-                      </div>
+                // Verificar progresso atual
+                const progress = progressManager.getProgress();
+                console.log('🔍 [VideoPlayerDedicated] Progresso atual ao montar próximos treinos:', progress);
+              }
+              
+              return (
+                <div 
+                  key={video.id}
+                  className="bg-gray-50 rounded-lg p-4 flex items-center space-x-4 hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200"
+                  onClick={() => {
+                    // Navegar para a URL específica do vídeo
+                    navigate(`/player/${trainingId}/${video.youtubeId}`);
+                  }}
+                >
+                  {/* Capa do vídeo */}
+                  <div className="w-16 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                    <img 
+                      src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
+                      alt={video.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  {/* Nome do treino */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-gray-900 font-medium truncate">{video.title}</h4>
+                    <p className="text-gray-600 text-sm truncate">{video.description}</p>
+                  </div>
+                  
+                  {/* Status de conclusão */}
+                  <div className="flex-shrink-0">
+                    <div 
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        isCompleted 
+                          ? 'bg-blue-500' 
+                          : 'bg-gray-300 border-2 border-gray-400'
+                      }`}
+                    >
+                      {isCompleted && (
+                        <Check className="w-4 h-4 text-white" />
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

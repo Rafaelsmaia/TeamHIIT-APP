@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, Settings, Sun, Moon, Utensils } from 'lucide-react';
+import { Menu, Settings, Sun, Moon, Utensils, Shield } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext.jsx';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebaseConfig';
 
 function Header() {
   const navigate = useNavigate();
@@ -9,6 +12,7 @@ function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const menuRef = useRef(null);
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -46,6 +50,30 @@ function Header() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
+  }, []);
+
+  // Verificar se usuário é admin
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setIsAdmin(Boolean(userData?.isAdmin));
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error('Erro ao verificar admin:', error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const toggleMobileMenu = () => {
@@ -138,6 +166,23 @@ function Header() {
                     </svg>
                     <span>Suporte</span>
                   </a>
+
+                  {/* Botão Painel Admin - Apenas para admins */}
+                  {isAdmin && (
+                    <>
+                      <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} my-2`}></div>
+                      <button
+                        onClick={() => {
+                          navigate('/admin/dashboard');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center space-x-3 px-4 py-3 ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-50 text-gray-700'} transition-colors text-left`}
+                      >
+                        <Shield className={`w-5 h-5 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                        <span>Painel Admin</span>
+                      </button>
+                    </>
+                  )}
                   
                   {/* Toggle de Tema */}
                   <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">

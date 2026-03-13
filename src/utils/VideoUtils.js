@@ -356,19 +356,71 @@ export const getFixedCalories = (videoId) => {
   return fixedCalories[videoId] || "300-500";
 };
 
+// Função para converter valor fixo de calorias em faixa baseado na regra
+const getCaloriesRangeFromValue = (caloriesValue) => {
+  // Baseado na regra: até 10min=200, 11-20min=250, 21-30min=450, 31-40min=600, 40+min=750
+  if (caloriesValue <= 200) {
+    return "100-300";  // Até 10 minutos
+  } else if (caloriesValue <= 250) {
+    return "200-300";  // 11-20 minutos
+  } else if (caloriesValue <= 450) {
+    return "300-500";  // 21-30 minutos
+  } else if (caloriesValue <= 600) {
+    return "500-700";  // 31-40 minutos
+  } else {
+    return "700-900";  // Acima de 40 minutos
+  }
+};
+
+// Função para calcular calorias baseada na duração (mesma regra do VideoDurations.js)
+const getCaloriesByDuration = (durationString) => {
+  // Extrair minutos da string "X min"
+  const minutes = parseInt(durationString.replace(' min', ''), 10);
+  
+  if (isNaN(minutes)) return 450; // Fallback
+  
+  if (minutes <= 10) {
+    return 200;
+  } else if (minutes <= 20) {
+    return 250;
+  } else if (minutes <= 30) {
+    return 450;
+  } else if (minutes <= 40) {
+    return 600;
+  } else {
+    return 750;
+  }
+};
+
 // Função de compatibilidade (mantém a interface existente)
 export const calculateCaloriesRange = (duration) => {
-  // Se receber uma URL, extrair o ID
+  // Se receber uma duração como string "X min", calcular baseado na regra
+  if (duration && typeof duration === 'string' && duration.includes('min')) {
+    const caloriesValue = getCaloriesByDuration(duration);
+    return getCaloriesRangeFromValue(caloriesValue);
+  }
+  
+  // Se receber uma URL, extrair o ID e tentar buscar
   if (duration && (duration.includes('youtube.com') || duration.includes('youtu.be'))) {
     const videoId = getYouTubeVideoId(duration);
-    return getFixedCalories(videoId);
+    if (videoId) {
+      const fixedCalories = getFixedCalories(videoId);
+      // Se encontrou uma faixa específica, retornar ela
+      if (fixedCalories && fixedCalories.includes('-')) {
+        return fixedCalories;
+      }
+    }
   }
   
   // Se receber um ID direto
   if (duration && duration.length === 11 && !duration.includes(':')) {
-    return getFixedCalories(duration);
+    const fixedCalories = getFixedCalories(duration);
+    // Se encontrou uma faixa específica, retornar ela
+    if (fixedCalories && fixedCalories.includes('-')) {
+      return fixedCalories;
+    }
   }
   
-  // Fallback para duração padrão
+  // Fallback: calcular baseado na duração padrão (21-30 min = 450 = "300-500")
   return "300-500";
 };

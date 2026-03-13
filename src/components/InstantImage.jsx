@@ -19,20 +19,25 @@ const InstantImage = ({
   // Função para processar URL com encoding completo (espaços e caracteres especiais)
   const processImageUrl = (url) => {
     if (!url) return '';
-    
-    // Usar encodeURI para codificar espaços, acentos e outros caracteres especiais
-    // encodeURI codifica caracteres especiais mas mantém barras e outros caracteres válidos de URL
+    // URLs absolutas (Firebase Storage, etc.) já vêm codificadas — não aplicar encodeURI para não quebrar
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+      return url;
+    }
     try {
       return encodeURI(url);
     } catch (error) {
       console.error('Erro ao codificar URL:', url, error);
-      // Fallback: apenas substituir espaços
       return url.replace(/ /g, '%20');
     }
   };
 
   const normalizeImagePath = (url) => {
     if (!url) return '';
+
+    // Não alterar URLs absolutas (Firebase Storage, CDN) nem blob (preview de arquivo selecionado)
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+      return url;
+    }
 
     let normalized = url.startsWith('/') ? url : `/${url}`;
 

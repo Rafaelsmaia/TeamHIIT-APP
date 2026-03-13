@@ -1,9 +1,75 @@
 import { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
 // Cache global para os dados dos treinos
 let trainingsDataCache = null;
 let isLoading = false;
 let loadingPromise = null;
+
+function mergeFirestoreIntoTrainingsData(baseData, firestoreTrainings) {
+  if (!baseData?.sections || !Array.isArray(baseData.sections)) {
+    return baseData;
+  }
+
+  const sections = baseData.sections.map((s) => ({
+    ...s,
+    trainings: Array.isArray(s.trainings) ? [...s.trainings] : [],
+  }));
+
+  const sectionIndexById = new Map();
+  sections.forEach((s, idx) => {
+    if (s?.id) sectionIndexById.set(s.id, idx);
+  });
+
+  const trainingsBySectionId = new Map();
+  (firestoreTrainings || []).forEach((t) => {
+    if (!t?.id || !t?.sectionId) return;
+    if (!trainingsBySectionId.has(t.sectionId)) trainingsBySectionId.set(t.sectionId, []);
+    trainingsBySectionId.get(t.sectionId).push(t);
+  });
+
+  trainingsBySectionId.forEach((trainingsList, sectionId) => {
+    const sectionIdx = sectionIndexById.get(sectionId);
+    if (sectionIdx === undefined) {
+      return;
+    }
+
+    const current = sections[sectionIdx];
+    const mergedTrainings = [...(current.trainings || [])];
+
+    trainingsList.forEach((fsTraining) => {
+      const existingIdx = mergedTrainings.findIndex((x) => x?.id === fsTraining.id);
+      const existing = existingIdx >= 0 ? mergedTrainings[existingIdx] : null;
+
+      // Merge campo a campo para permitir sobrescrever inclusive falsy (ex: comingSoon=false)
+      const merged = { ...(existing || {}), ...(fsTraining || {}) };
+      if (existingIdx >= 0) mergedTrainings[existingIdx] = merged;
+      else mergedTrainings.unshift(merged);
+    });
+
+    // Ordenar treinos por campo "order" quando existir
+    mergedTrainings.sort((a, b) => {
+      const orderA = typeof a.order === 'number' ? a.order : 9999;
+      const orderB = typeof b.order === 'number' ? b.order : 9999;
+      return orderA - orderB;
+    });
+
+    sections[sectionIdx] = { ...current, trainings: mergedTrainings };
+  });
+
+  return { ...baseData, sections };
+}
+
+async function fetchFirestoreTrainings() {
+  try {
+    const snap = await getDocs(collection(db, 'trainings'));
+    return snap.docs.map((d) => ({ firestoreId: d.id, ...d.data() }));
+  } catch (e) {
+    // Se Firestore falhar, seguir só com trainings.js
+    return [];
+  }
+}
 
 export const useTrainingsData = () => {
   const [data, setData] = useState(trainingsDataCache);
@@ -37,9 +103,13 @@ export const useTrainingsData = () => {
           if (window.trainingsData && window.trainingsData.sections) {
             // Validar estrutura dos dados
             validateTrainingsData(window.trainingsData);
-            trainingsDataCache = window.trainingsData;
-            isLoading = false;
-            resolve(window.trainingsData);
+            (async () => {
+              const firestoreTrainings = await fetchFirestoreTrainings();
+              const merged = mergeFirestoreIntoTrainingsData(window.trainingsData, firestoreTrainings);
+              trainingsDataCache = merged;
+              isLoading = false;
+              resolve(merged);
+            })();
             return;
           }
 
@@ -50,9 +120,13 @@ export const useTrainingsData = () => {
               console.log('✅ useTrainingsData - Dados carregados via script');
               // Validar estrutura dos dados
               validateTrainingsData(window.trainingsData);
-              trainingsDataCache = window.trainingsData;
-              isLoading = false;
-              resolve(window.trainingsData);
+              (async () => {
+                const firestoreTrainings = await fetchFirestoreTrainings();
+                const merged = mergeFirestoreIntoTrainingsData(window.trainingsData, firestoreTrainings);
+                trainingsDataCache = merged;
+                isLoading = false;
+                resolve(merged);
+              })();
             }
           }, 25); // Reduzido de 50ms para 25ms para verificação mais frequente
 
@@ -100,18 +174,26 @@ export const preloadTrainingsData = () => {
   
   return new Promise((resolve, reject) => {
     if (window.trainingsData && window.trainingsData.sections) {
-      trainingsDataCache = window.trainingsData;
-      isLoading = false;
-      resolve(window.trainingsData);
+      (async () => {
+        const firestoreTrainings = await fetchFirestoreTrainings();
+        const merged = mergeFirestoreIntoTrainingsData(window.trainingsData, firestoreTrainings);
+        trainingsDataCache = merged;
+        isLoading = false;
+        resolve(merged);
+      })();
       return;
     }
 
     const checkInterval = setInterval(() => {
       if (window.trainingsData && window.trainingsData.sections) {
         clearInterval(checkInterval);
-        trainingsDataCache = window.trainingsData;
-        isLoading = false;
-        resolve(window.trainingsData);
+        (async () => {
+          const firestoreTrainings = await fetchFirestoreTrainings();
+          const merged = mergeFirestoreIntoTrainingsData(window.trainingsData, firestoreTrainings);
+          trainingsDataCache = merged;
+          isLoading = false;
+          resolve(merged);
+        })();
       }
     }, 25); // Reduzido de 50ms para 25ms para verificação mais frequente
 

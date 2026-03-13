@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
 import TrainingOverview from './pages/TrainingOverview.jsx';
@@ -16,11 +16,22 @@ import SplashScreen from './components/SplashScreen.jsx';
 import { usePWAAuth } from './hooks/UsePWAAuth.js';
 import { FirebaseSyncProvider } from './contexts/FirebaseSyncContext.jsx';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import AdminLayout from './admin/AdminLayout.jsx';
+import AdminRoute from './admin/components/AdminRoute.jsx';
 import './App.css';
 import './styles/responsive.css';
 import './styles/animations.css';
 import './styles/smooth-loading.css';
 import './pwa-ios-fix.css';
+
+// Lazy load admin pages
+const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard.jsx'));
+const AdminUsers = lazy(() => import('./admin/pages/AdminUsers.jsx'));
+const AdminModules = lazy(() => import('./admin/pages/AdminModules.jsx'));
+const AdminModuleEdit = lazy(() => import('./admin/pages/AdminModuleEdit.jsx'));
+const AdminTrainings = lazy(() => import('./admin/pages/AdminTrainings.jsx'));
+const AdminAnalytics = lazy(() => import('./admin/pages/AdminAnalytics.jsx'));
+const AdminSettings = lazy(() => import('./admin/pages/AdminSettings.jsx'));
 
 function PrivateRoute({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -161,14 +172,83 @@ function AppContent() {
                   </PrivateRoute>
                 }
               />
+              {/* Admin Routes */}
               <Route 
-                path="/admin/notifications" 
+                path="/admin" 
                 element={
                   <PrivateRoute>
-                    <AdminNotifications />
+                    <AdminRoute>
+                      <AdminLayout />
+                    </AdminRoute>
                   </PrivateRoute>
                 }
-              />
+              >
+                <Route 
+                  path="dashboard" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminDashboard />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="users" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminUsers />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="modules" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminModules />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="modules/edit/:moduleId" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminModuleEdit />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="trainings" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminTrainings />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="notifications" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminNotifications />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="analytics" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminAnalytics />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="settings" 
+                  element={
+                    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>}>
+                      <AdminSettings />
+                    </Suspense>
+                  } 
+                />
+                <Route path="" element={<Navigate to="dashboard" replace />} />
+              </Route>
               <Route 
                 path="/settings" 
                 element={
