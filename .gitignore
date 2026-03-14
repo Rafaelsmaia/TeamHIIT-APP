@@ -30,6 +30,7 @@ lerna-debug.log*
 serviceAccount.json
 functions/serviceAccount.json
 serviceAccountKey.json
+*.p8
 *-firebase-adminsdk-*.json
 
 # Dados de usuários

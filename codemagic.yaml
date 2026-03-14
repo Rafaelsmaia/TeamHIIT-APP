@@ -1,0 +1,70 @@
+workflows:
+  ios_teamhiit:
+    name: Team HIIT iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    triggering:
+      events:
+        - manual
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "com.teamhiit.app"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        APP_STORE_APPLE_ID: ""
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.teamhiit.app
+      integrations:
+        app_store_connect: teamhiit_app_store_connect
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+
+      - name: Build web assets
+        script: |
+          npm run build
+
+      - name: Sync Capacitor iOS project
+        script: |
+          npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd "$CM_BUILD_DIR/ios/App"
+          pod install
+
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles \
+            --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+      - name: Set build number
+        script: |
+          cd "$CM_BUILD_DIR/ios/App"
+          if [ -n "$APP_STORE_APPLE_ID" ]; then
+            LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+            if [ -z "$LATEST_BUILD_NUMBER" ]; then
+              LATEST_BUILD_NUMBER=0
+            fi
+            agvtool new-version -all $((LATEST_BUILD_NUMBER + 1))
+          else
+            agvtool new-version -all "${BUILD_NUMBER}"
+          fi
+
+      - name: Build signed ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
