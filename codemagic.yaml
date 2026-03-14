@@ -3,6 +3,8 @@ workflows:
     name: Team HIIT iOS
     max_build_duration: 60
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: teamhiit_app_store_connect
     environment:
       node: 20
       xcode: latest
@@ -11,12 +13,9 @@ workflows:
         BUNDLE_ID: "com.teamhiit.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        APP_STORE_APPLE_ID: ""
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.teamhiit.app
-      integrations:
-        app_store_connect: teamhiit_app_store_connect
     scripts:
       - name: Install npm dependencies
         script: |
