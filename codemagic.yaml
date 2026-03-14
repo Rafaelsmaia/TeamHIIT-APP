@@ -3,9 +3,6 @@ workflows:
     name: Team HIIT iOS
     max_build_duration: 60
     instance_type: mac_mini_m2
-    triggering:
-      events:
-        - manual
     environment:
       node: 20
       xcode: latest
