@@ -37,8 +37,7 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles \
-            --workspace "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj"
 
       - name: Set build number
         script: |
