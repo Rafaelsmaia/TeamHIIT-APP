@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import BottomNavigation from '../components/ui/BottomNavigation.jsx';
 import Header from '../components/ui/Header.jsx';
+import { COMMUNITY_FALLBACK_IMAGE } from '../utils/mediaHelpers.js';
 // Componente de imagem otimizado para Community
-const CommunityImage = ({ src, alt, className, fallbackSrc = '/fina.png', style, onClick }) => {
+const CommunityImage = ({ src, alt, className, fallbackSrc = COMMUNITY_FALLBACK_IMAGE, style, onClick }) => {
   const [imageSrc, setImageSrc] = useState(src || fallbackSrc);
   const [isLoading, setIsLoading] = useState(true);
 

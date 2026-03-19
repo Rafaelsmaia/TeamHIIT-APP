@@ -12,6 +12,8 @@ export const encodeImageUrl = (url) => {
   return encodeURI(normalized);
 };
 
+export const COMMUNITY_FALLBACK_IMAGE = '/IMAGES/LOGOS/ICONE-TH.png';
+
 export const getModuleImage = (trainingId, sections, fallback = '/IMAGES/CAPAS TEAM HIIT/capa TH.png') => {
   if (!trainingId) return fallback;
 

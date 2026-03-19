@@ -10,6 +10,7 @@ import { usePWAAuth } from '../hooks/UsePWAAuth.js';
 import ProfilePhoto from '../components/ProfilePhoto.jsx';
 import BottomNavigation from '../components/ui/BottomNavigation.jsx';
 import CircularProfileCropModal from '../components/CircularProfileCropModal.jsx';
+import { PlatformConfig } from '../config/platform.js';
 
 function Profile() {
   const auth = getAuth();
@@ -818,7 +819,8 @@ function Profile() {
         </div>
 
         {/* InstaHIIT - Minhas Postagens */}
-        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 mb-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        {PlatformConfig.isCommunityEnabled && (
+          <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 mb-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="bg-gradient-to-br from-pink-500 to-red-500 p-2 rounded-lg">
@@ -894,7 +896,8 @@ function Profile() {
                 </button>
               </div>
             )}
-        </div>
+          </div>
+        )}
 
         {/* Informações da Conta */}
         <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 mt-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>

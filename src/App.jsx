@@ -18,6 +18,7 @@ import { FirebaseSyncProvider } from './contexts/FirebaseSyncContext.jsx';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import AdminLayout from './admin/AdminLayout.jsx';
 import AdminRoute from './admin/components/AdminRoute.jsx';
+import { PlatformConfig } from './config/platform.js';
 import './App.css';
 import './styles/responsive.css';
 import './styles/animations.css';
@@ -151,9 +152,13 @@ function AppContent() {
               <Route 
                 path="/community" 
                 element={
-                  <PrivateRoute>
-                    <Community />
-                  </PrivateRoute>
+                  PlatformConfig.isCommunityEnabled ? (
+                    <PrivateRoute>
+                      <Community />
+                    </PrivateRoute>
+                  ) : (
+                    <Navigate to="/dashboard" replace />
+                  )
                 }
               />
               <Route 

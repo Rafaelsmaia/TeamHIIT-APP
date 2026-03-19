@@ -5,6 +5,7 @@ import { db, storage } from '../../firebaseConfig'
 import ImageCropperModal from './ImageCropperModal.jsx'
 import { useAspectCropper } from '../../hooks/useAspectCropper.js'
 import NotificationService from '../../services/NotificationService.js'
+import { COMMUNITY_FALLBACK_IMAGE } from '../../utils/mediaHelpers.js'
 
 function AnnouncementsTab({ isAdmin, currentUser, isDarkMode }) {
   const [announcements, setAnnouncements] = useState([])
@@ -396,6 +397,10 @@ function AnnouncementsTab({ isAdmin, currentUser, isDarkMode }) {
                           alt={`Imagem do anúncio ${index + 1}`}
                           className="w-full h-auto object-contain"
                           loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null
+                            event.currentTarget.src = COMMUNITY_FALLBACK_IMAGE
+                          }}
                         />
                       </div>
                     ))}

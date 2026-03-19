@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import SplashScreen from './SplashScreen.jsx';
+import { COMMUNITY_FALLBACK_IMAGE } from '../utils/mediaHelpers.js';
 
 // Cache global para imagens pré-carregadas
 window.imageCache = new Map();
@@ -49,7 +50,7 @@ const ImagePreloader = ({ children, onLoadComplete, showSplash = true }) => {
       '/BANNER PRINCIPAL/TREINOS-GRATIS-vertical.png',
       '/BANNER PRINCIPAL/Indique-um-amigo.png',
       '/BANNER PRINCIPAL/Indique-um-amigo-vertical.png',
-      '/fina.png',
+      COMMUNITY_FALLBACK_IMAGE,
       '/team-hiit-icon.png',
       '/iconePWA.png'
     ];
@@ -103,7 +104,7 @@ const ImagePreloader = ({ children, onLoadComplete, showSplash = true }) => {
       '/BANNER PRINCIPAL/TREINOS-GRATIS-vertical.png',
       '/BANNER PRINCIPAL/Indique-um-amigo.png',
       '/BANNER PRINCIPAL/Indique-um-amigo-vertical.png',
-      '/fina.png',
+      COMMUNITY_FALLBACK_IMAGE,
       '/team-hiit-icon.png',
       '/iconePWA.png'
     ];

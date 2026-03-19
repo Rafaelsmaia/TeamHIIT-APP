@@ -1,11 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ArrowLeft, Zap, FileText, ExternalLink } from 'lucide-react';
+import { Bell, ArrowLeft, Zap, FileText, ExternalLink, Trash2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import Header from '../components/ui/Header.jsx';
-import { getAuth } from 'firebase/auth';
+import { deleteUser, EmailAuthProvider, getAuth, reauthenticateWithCredential, signOut } from 'firebase/auth';
+import { collection, collectionGroup, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../firebaseConfig.js';
 import NotificationService from '../services/NotificationService.js';
 import { useNotifications } from '../hooks/useNotifications.js';
+
+const clearUserLocalData = () => {
+  const keysToRemove = [
+    'authenticated',
+    'user_email',
+    'user_uid',
+    'user',
+    'notificationSettings',
+    'teamhiit_user_progress',
+    'teamhiit_user_habits',
+    'pendingPostImage',
+    'pendingPostImageName',
+    'pendingPostImageType',
+    'pendingCalorieImage',
+    'pendingCalorieImageName',
+    'pendingCalorieImageType'
+  ];
+
+  keysToRemove.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+};
+
+const deleteDocsFromSnapshot = async (snapshot) => {
+  await Promise.all(snapshot.docs.map((item) => deleteDoc(item.ref)));
+};
 
 function Settings() {
   const navigate = useNavigate();
@@ -27,6 +56,10 @@ function Settings() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Scroll para o topo quando a página é carregada
   useEffect(() => {
@@ -111,6 +144,98 @@ function Settings() {
       persistSettings(updated);
       return updated;
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser?.email) {
+      setDeleteError('Não foi possível validar a conta atual.');
+      return;
+    }
+
+    if (!deletePassword) {
+      setDeleteError('Digite sua senha atual para excluir a conta.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Tem certeza que deseja excluir sua conta? Esta ação apaga o acesso e os dados principais do app e não pode ser desfeita.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+
+    try {
+      const credential = EmailAuthProvider.credential(currentUser.email, deletePassword);
+      await reauthenticateWithCredential(currentUser, credential);
+
+      const userId = currentUser.uid;
+      const email = currentUser.email;
+
+      const [
+        userPostsSnapshot,
+        trainingCommentsSnapshot,
+        communityCommentsSnapshot,
+        notificationsSnapshot,
+        workoutHistorySnapshot,
+        interactionsSnapshot
+      ] = await Promise.all([
+        getDocs(query(collection(db, 'posts'), where('authorId', '==', userId))),
+        getDocs(query(collection(db, 'comments'), where('userId', '==', userId))),
+        getDocs(query(collectionGroup(db, 'comments'), where('authorId', '==', userId))),
+        getDocs(query(collection(db, 'notifications'), where('userId', '==', userId))),
+        getDocs(query(collection(db, 'workoutHistory'), where('userId', '==', userId))),
+        getDocs(collection(db, 'userInteractions', userId, 'posts'))
+      ]);
+
+      await Promise.all(
+        userPostsSnapshot.docs.map(async (postDoc) => {
+          const postCommentsSnapshot = await getDocs(collection(db, 'posts', postDoc.id, 'comments'));
+          await deleteDocsFromSnapshot(postCommentsSnapshot);
+          await deleteDoc(postDoc.ref);
+        })
+      );
+
+      await Promise.all([
+        deleteDocsFromSnapshot(trainingCommentsSnapshot),
+        deleteDocsFromSnapshot(communityCommentsSnapshot),
+        deleteDocsFromSnapshot(notificationsSnapshot),
+        deleteDocsFromSnapshot(workoutHistorySnapshot),
+        deleteDocsFromSnapshot(interactionsSnapshot),
+        deleteDoc(doc(db, 'users', userId)).catch(() => {}),
+        deleteDoc(doc(db, 'progress', userId)).catch(() => {}),
+        deleteDoc(doc(db, 'habits', userId)).catch(() => {}),
+        deleteDoc(doc(db, 'fcm_tokens', userId)).catch(() => {}),
+        deleteDoc(doc(db, 'notification_preferences', userId)).catch(() => {}),
+        deleteDoc(doc(db, 'user_credentials', email)).catch(() => {})
+      ]);
+
+      await deleteUser(currentUser);
+      clearUserLocalData();
+      await signOut(auth).catch(() => {});
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('Erro ao excluir conta:', error);
+
+      switch (error.code) {
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          setDeleteError('Senha atual incorreta.');
+          break;
+        case 'auth/requires-recent-login':
+          setDeleteError('Faça login novamente e tente excluir a conta de novo.');
+          break;
+        default:
+          setDeleteError('Não foi possível excluir a conta agora. Tente novamente.');
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   if (loading) {
@@ -258,6 +383,66 @@ function Settings() {
               </div>
               <ExternalLink className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
             </a>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Conta
+          </h2>
+
+          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} overflow-hidden`}>
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <Trash2 className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Excluir Conta
+                    </h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Remove o acesso ao app e os dados principais vinculados a esta conta.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDeleteAccount((prev) => !prev);
+                    setDeleteError(null);
+                    setDeletePassword('');
+                  }}
+                  className="text-sm font-medium text-red-500 hover:text-red-400 transition-colors"
+                >
+                  {showDeleteAccount ? 'Cancelar' : 'Excluir conta'}
+                </button>
+              </div>
+
+              {showDeleteAccount && (
+                <div className="mt-4 space-y-3">
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(event) => setDeletePassword(event.target.value)}
+                    placeholder="Digite sua senha atual"
+                    className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-red-500`}
+                  />
+
+                  {deleteError && (
+                    <p className="text-sm text-red-500">{deleteError}</p>
+                  )}
+
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={isDeletingAccount}
+                    className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isDeletingAccount ? 'Excluindo conta...' : 'Confirmar exclusão da conta'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

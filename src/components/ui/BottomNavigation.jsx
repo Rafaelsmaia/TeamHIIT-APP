@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Instagram, User, Dumbbell, Camera, X, Utensils, Image as ImageIcon } from 'lucide-react';
+import { Home, Instagram, User, Dumbbell, Camera, X, Utensils } from 'lucide-react';
+import { PlatformConfig } from '../../config/platform.js';
 
 function BottomNavigation() {
   const navigate = useNavigate();
@@ -267,20 +268,6 @@ function BottomNavigation() {
       icon: Dumbbell,
       path: '/teamhiit'
     },
-    // Espaço para o botão central da câmera
-    {
-      id: 'camera',
-      label: '',
-      icon: null,
-      path: null,
-      isCamera: true
-    },
-    {
-      id: 'instahiit',
-      label: 'InstaHIIT',
-      icon: Instagram,
-      path: '/community'
-    },
     {
       id: 'profile',
       label: 'Perfil',
@@ -288,6 +275,26 @@ function BottomNavigation() {
       path: '/profile'
     }
   ];
+
+  if (PlatformConfig.isCommunityEnabled) {
+    menuItems.splice(
+      2,
+      0,
+      {
+        id: 'camera',
+        label: '',
+        icon: null,
+        path: null,
+        isCamera: true
+      },
+      {
+        id: 'instahiit',
+        label: 'InstaHIIT',
+        icon: Instagram,
+        path: '/community'
+      }
+    );
+  }
 
   return (
     <>
