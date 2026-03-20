@@ -1,3 +1,7 @@
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
+import { PlatformConfig } from '../config/platform.js';
+
 export const encodeImageUrl = (url) => {
   if (!url) return '';
   // URLs absolutas (Firebase Storage, etc.) não devem receber prefixo nem alteração
@@ -90,8 +94,12 @@ export const buildYouTubeWatchUrl = (videoId) => {
   return `https://www.youtube.com/watch?v=${videoId}`;
 };
 
-export const openYouTubeExternally = (videoId) => {
-  const url = buildYouTubeWatchUrl(videoId);
+export const getYouTubeThumbnailUrl = (videoId, quality = 'hqdefault') => {
+  if (!videoId) return null;
+  return `https://i.ytimg.com/vi/${videoId}/${quality}.jpg`;
+};
+
+const openUrlWithWindow = (url) => {
   if (!url || typeof window === 'undefined') {
     return false;
   }
@@ -104,3 +112,35 @@ export const openYouTubeExternally = (videoId) => {
 
   return true;
 };
+
+export const shouldUseNativeVideoExperience = (videoId) => {
+  if (!videoId) {
+    return false;
+  }
+
+  return PlatformConfig.isNative && PlatformConfig.isIOS;
+};
+
+export const openYouTubeInPreferredExperience = async (videoId) => {
+  const url = buildYouTubeWatchUrl(videoId);
+  if (!url) {
+    return false;
+  }
+
+  if (shouldUseNativeVideoExperience(videoId) && Capacitor.isPluginAvailable('Browser')) {
+    try {
+      await Browser.open({
+        url,
+        presentationStyle: 'fullscreen',
+        toolbarColor: '#111827',
+      });
+      return true;
+    } catch (error) {
+      console.error('Erro ao abrir vídeo no browser in-app:', error);
+    }
+  }
+
+  return openUrlWithWindow(url);
+};
+
+export const openYouTubeExternally = (videoId) => openUrlWithWindow(buildYouTubeWatchUrl(videoId));

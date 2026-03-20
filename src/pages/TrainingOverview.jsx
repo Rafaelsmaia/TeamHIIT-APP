@@ -11,8 +11,12 @@ import { usePWAAuth } from '../hooks/UsePWAAuth.js';
 import progressManager from '../utils/ProgressManager.js';
 import { getVideoDuration } from '../utils/VideoDurations.js';
 import InstantImage from '../components/InstantImage.jsx';
-import { buildYouTubeEmbedUrl, openYouTubeExternally } from '../utils/mediaHelpers.js';
-import { PlatformConfig } from '../config/platform.js';
+import NativeVideoLaunchCard from '../components/NativeVideoLaunchCard.jsx';
+import {
+  buildYouTubeEmbedUrl,
+  openYouTubeInPreferredExperience,
+  shouldUseNativeVideoExperience,
+} from '../utils/mediaHelpers.js';
 
 // Helper function to get YouTube video ID
 const getYouTubeVideoId = (url) => {
@@ -348,26 +352,29 @@ function TrainingOverview() {
 
   useEffect(() => {
     // Load comments for this video (apenas se for assinante)
-    if (videoData?.youtubeId && isSubscriber) {
-      const commentsRef = collection(db, 'comments');
-      const q = query(
-        commentsRef,
-        orderBy('createdAt', 'desc')
-      );
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const videoComments = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }))
-          .filter(comment => comment.videoId === videoData.youtubeId);
-        
-        setComments(videoComments);
-      });
-
-      return () => unsubscribe();
+    if (!videoData?.youtubeId || !isSubscriber) {
+      setComments([]);
+      return undefined;
     }
+
+    const commentsRef = collection(db, 'comments');
+    const q = query(
+      commentsRef,
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const videoComments = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(comment => comment.videoId === videoData.youtubeId);
+      
+      setComments(videoComments);
+    });
+
+    return () => unsubscribe();
   }, [videoData?.youtubeId, db, isSubscriber]);
 
   // CORREÇÃO: Função handleVideoSelect melhorada - MANTENDO LAYOUT ORIGINAL
@@ -543,8 +550,17 @@ function TrainingOverview() {
     return !isPresentation;
   });
   const currentYouTubeId = videoData?.youtubeId || getYouTubeVideoId(videoData?.videoUrl);
-  const shouldUseExternalYoutubeFallback = PlatformConfig.isNative && PlatformConfig.isIOS && Boolean(currentYouTubeId);
+  const shouldUseNativePlayerExperience = shouldUseNativeVideoExperience(currentYouTubeId);
   const youtubeEmbedUrl = buildYouTubeEmbedUrl(currentYouTubeId);
+  const visibleComments = comments.filter(comment => !blockedUserIds.has(comment.userId));
+
+  const handleOpenCurrentVideo = () => {
+    if (!currentYouTubeId) {
+      return;
+    }
+
+    void openYouTubeInPreferredExperience(currentYouTubeId);
+  };
 
   if (loading) {
     return (
@@ -654,35 +670,15 @@ function TrainingOverview() {
                   </h3>
                 </div>
                 <div className="p-4 md:p-6">
-                  {shouldUseExternalYoutubeFallback ? (
-                    <div
-                      className={`flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border px-6 py-8 text-center ${
-                      isDarkMode ? 'border-gray-700 bg-black/40 text-white' : 'border-gray-200 bg-gray-50 text-gray-900'
-                      }`}
-                      onClick={() => openYouTubeExternally(currentYouTubeId)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          openYouTubeExternally(currentYouTubeId);
-                        }
-                      }}
-                    >
-                      <div className="mb-4 rounded-full bg-red-600 p-4 text-white shadow-lg">
-                        <Play className="h-6 w-6 fill-current" />
-                      </div>
-                      <h4 className="mb-2 text-lg font-bold">Abrir vídeo no YouTube</h4>
-                      <p className={`mb-6 max-w-md text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        No iPhone, este vídeo é aberto externamente para evitar o erro 153 do player incorporado do YouTube no WKWebView.
-                      </p>
-                      <button
-                        onClick={() => openYouTubeExternally(currentYouTubeId)}
-                        className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700"
-                      >
-                        Assistir no YouTube
-                      </button>
-                    </div>
+                  {shouldUseNativePlayerExperience ? (
+                    <NativeVideoLaunchCard
+                      videoId={currentYouTubeId}
+                      title="Assistir treino"
+                      description="O vídeo abre em uma janela integrada ao app para uma reprodução mais estável no iPhone."
+                      buttonLabel="Abrir treino"
+                      isDarkMode={isDarkMode}
+                      onOpen={handleOpenCurrentVideo}
+                    />
                   ) : (
                     <div className="relative w-full overflow-hidden" style={{ paddingBottom: '56.25%' }}>
                       <iframe
@@ -703,7 +699,13 @@ function TrainingOverview() {
 
               {/* Botão COMEÇAR PROJETO / ENTRAR PRO TIME */}
               {firstTrainingVideo && (
-                <div className="mt-6 flex justify-center">
+                <div
+                  className={`mt-6 rounded-2xl border p-3 shadow-xl backdrop-blur sm:p-4 ${
+                    isDarkMode ? 'border-gray-800 bg-black/45' : 'border-gray-200 bg-white/95'
+                  }`}
+                  style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+                >
+                  <div className="flex justify-center">
                   {isSubscriber ? (
                     <button
                       onClick={() => {
@@ -718,7 +720,7 @@ function TrainingOverview() {
                           console.log('Erro: firstTrainingVideo ou youtubeId não encontrado');
                         }
                       }}
-                      className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                      className="min-h-[56px] w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4 text-base font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-red-600 sm:w-auto sm:min-w-[280px] sm:px-8 sm:text-lg"
                     >
                       COMEÇAR PROJETO
                     </button>
@@ -727,22 +729,23 @@ function TrainingOverview() {
                       onClick={() => {
                         window.open('https://teamhiit.com.br', '_blank');
                       }}
-                      className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                      className="min-h-[56px] w-full rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4 text-base font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-red-600 sm:w-auto sm:min-w-[280px] sm:px-8 sm:text-lg"
                     >
                       ENTRAR PRO TIME
                     </button>
                   )}
+                  </div>
                 </div>
               )}
 
 
               {/* Comments Section - Apenas para assinantes */}
-              {isSubscriber && (
+              {isSubscriber && visibleComments.length > 0 && (
                 <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl shadow-lg mt-6 max-w-full overflow-hidden border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
                   <div className={`p-4 md:p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                     <div className="flex items-center">
                       <MessageCircle className={`w-5 h-5 md:w-6 md:h-6 mr-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                      <h3 className={`text-lg md:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Comentários ({comments.length})</h3>
+                      <h3 className={`text-lg md:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Comentários ({visibleComments.length})</h3>
                     </div>
                   </div>
 
@@ -796,55 +799,48 @@ function TrainingOverview() {
 
                   {/* Comments List */}
                   <div className="p-4 md:p-6">
-                    {comments.length > 0 ? (
-                      <div className="space-y-6">
-                        {comments.filter(c => !blockedUserIds.has(c.userId)).map((comment) => (
-                          <div key={comment.id} className="flex space-x-4">
-                            <div className="flex-shrink-0">
-                              <img
-                                src={comment.userPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.userName)}&background=f97316&color=fff`}
-                                alt={comment.userName}
-                                className="w-8 h-8 md:w-10 md:h-10 rounded-full"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                <span className={`font-semibold text-sm md:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comment.userName}</span>
-                                <span className={`text-xs md:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{formatDate(comment.createdAt)}</span>
-                                </div>
-                                <div className="relative">
-                                  <button className="p-1 rounded hover:bg-gray-700" onClick={() => setOpenMenuForComment(prev => ({ ...prev, [comment.id]: !prev[comment.id] }))}>
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </button>
-                                  {openMenuForComment[comment.id] && (
-                                    <div className={`absolute right-0 mt-2 w-44 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-lg z-10`}>
-                                      <button className="w-full text-left px-3 py-2 hover:bg-gray-100" onClick={async () => {
-                                        await reportContent({ reporterId: user.uid, targetId: `${videoData.youtubeId}:${comment.id}`, targetAuthorId: comment.userId, type: 'video_comment', reason: 'inappropriate', context: { videoId: videoData.youtubeId } });
-                                        setOpenMenuForComment(prev => ({ ...prev, [comment.id]: false }));
-                                        alert('Comentário reportado.');
-                                      }}>Reportar</button>
-                                      <button className="w-full text-left px-3 py-2 hover:bg-gray-100" onClick={async () => {
-                                        await blockUser({ userId: user.uid, blockedUserId: comment.userId });
-                                        const ids = new Set(blockedUserIds); ids.add(comment.userId); setBlockedUserIds(ids);
-                                        setOpenMenuForComment(prev => ({ ...prev, [comment.id]: false }));
-                                        alert('Usuário bloqueado.');
-                                      }}>Bloquear usuário</button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <p className={`leading-relaxed text-sm md:text-base break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{comment.text}</p>
-                            </div>
+                    <div className="space-y-6">
+                      {visibleComments.map((comment) => (
+                        <div key={comment.id} className="flex space-x-4">
+                          <div className="flex-shrink-0">
+                            <img
+                              src={comment.userPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.userName)}&background=f97316&color=fff`}
+                              alt={comment.userName}
+                              className="w-8 h-8 md:w-10 md:h-10 rounded-full"
+                            />
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <MessageCircle className={`w-10 h-10 md:w-12 md:h-12 mx-auto mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Seja o primeiro a comentar!</p>
-                      </div>
-                    )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center space-x-2">
+                              <span className={`font-semibold text-sm md:text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comment.userName}</span>
+                              <span className={`text-xs md:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{formatDate(comment.createdAt)}</span>
+                              </div>
+                              <div className="relative">
+                                <button className="p-1 rounded hover:bg-gray-700" onClick={() => setOpenMenuForComment(prev => ({ ...prev, [comment.id]: !prev[comment.id] }))}>
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+                                {openMenuForComment[comment.id] && (
+                                  <div className={`absolute right-0 mt-2 w-44 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-lg z-10`}>
+                                    <button className="w-full text-left px-3 py-2 hover:bg-gray-100" onClick={async () => {
+                                      await reportContent({ reporterId: user.uid, targetId: `${videoData.youtubeId}:${comment.id}`, targetAuthorId: comment.userId, type: 'video_comment', reason: 'inappropriate', context: { videoId: videoData.youtubeId } });
+                                      setOpenMenuForComment(prev => ({ ...prev, [comment.id]: false }));
+                                      alert('Comentário reportado.');
+                                    }}>Reportar</button>
+                                    <button className="w-full text-left px-3 py-2 hover:bg-gray-100" onClick={async () => {
+                                      await blockUser({ userId: user.uid, blockedUserId: comment.userId });
+                                      const ids = new Set(blockedUserIds); ids.add(comment.userId); setBlockedUserIds(ids);
+                                      setOpenMenuForComment(prev => ({ ...prev, [comment.id]: false }));
+                                      alert('Usuário bloqueado.');
+                                    }}>Bloquear usuário</button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <p className={`leading-relaxed text-sm md:text-base break-words ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{comment.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

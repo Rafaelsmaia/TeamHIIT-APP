@@ -19,14 +19,18 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Header from '../components/ui/Header.jsx';
+import NativeVideoLaunchCard from '../components/NativeVideoLaunchCard.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import progressManager from '../utils/ProgressManager.js';
 import { getVideoDuration } from '../utils/VideoDurations.js';
 import { calculateCaloriesRange } from '../utils/VideoUtils.js';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { buildYouTubeEmbedUrl, openYouTubeExternally } from '../utils/mediaHelpers.js';
-import { PlatformConfig } from '../config/platform.js';
+import {
+  buildYouTubeEmbedUrl,
+  openYouTubeInPreferredExperience,
+  shouldUseNativeVideoExperience,
+} from '../utils/mediaHelpers.js';
 
 // Estilos CSS para animação do fogo
 const fireAnimation = `
@@ -91,6 +95,7 @@ function VideoPlayerDedicated() {
   
   const videoRef = useRef(null);
   const playlistRef = useRef(null);
+  const autoOpenedVideoRef = useRef(null);
   const pageContentStyle = {
     paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))'
   };
@@ -341,8 +346,24 @@ function VideoPlayerDedicated() {
     return (match && match[1].length === 11) ? match[1] : null;
   };
   const currentYouTubeId = videoData?.youtubeId || getYouTubeVideoId(videoData?.videoUrl);
-  const shouldUseExternalYoutubeFallback = PlatformConfig.isNative && PlatformConfig.isIOS && Boolean(currentYouTubeId);
+  const shouldUseNativePlayerExperience = shouldUseNativeVideoExperience(currentYouTubeId);
   const youtubeEmbedUrl = buildYouTubeEmbedUrl(currentYouTubeId);
+
+  useEffect(() => {
+    const experienceKey = `${trainingId || 'training'}:${currentYouTubeId || 'video'}`;
+
+    if (!shouldUseNativePlayerExperience || !currentYouTubeId) {
+      autoOpenedVideoRef.current = null;
+      return;
+    }
+
+    if (autoOpenedVideoRef.current === experienceKey) {
+      return;
+    }
+
+    autoOpenedVideoRef.current = experienceKey;
+    void openYouTubeInPreferredExperience(currentYouTubeId);
+  }, [currentYouTubeId, shouldUseNativePlayerExperience, trainingId]);
 
   // Removido: calculateCaloriesRange - agora usando VideoUtils.js
 
@@ -446,7 +467,7 @@ function VideoPlayerDedicated() {
     setManualInteraction(false); // Resetar interação manual para o novo vídeo
     
     // Atualizar URL sem recarregar
-    const newUrl = `/player/${trainingId}/${video.id}/${video.youtubeId}`;
+    const newUrl = `/player/${trainingId}/${video.youtubeId}`;
     window.history.pushState(null, '', newUrl);
   };
 
@@ -559,9 +580,6 @@ function VideoPlayerDedicated() {
       targetIndex = 0;
     }
     
-    // Mostrar alert de confirmação
-    alert(`Navegando para: ${targetVideo.title}`);
-    
     // Atualizar estados
     setCurrentVideoIndex(targetIndex);
     
@@ -602,6 +620,14 @@ function VideoPlayerDedicated() {
       }]);
       setNewComment('');
     }
+  };
+
+  const handleOpenCurrentVideo = () => {
+    if (!currentYouTubeId) {
+      return;
+    }
+
+    void openYouTubeInPreferredExperience(currentYouTubeId);
   };
 
   if (loading) {
@@ -667,35 +693,19 @@ function VideoPlayerDedicated() {
 
       {/* Video Player */}
       <div className="relative bg-black">
-        <div className="relative w-full aspect-video">
-          {shouldUseExternalYoutubeFallback ? (
-            <div
-              className="flex h-full w-full cursor-pointer flex-col items-center justify-center px-6 text-center text-white"
-              onClick={() => openYouTubeExternally(currentYouTubeId)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  openYouTubeExternally(currentYouTubeId);
-                }
-              }}
-            >
-              <div className="mb-4 rounded-full bg-red-600 p-4 shadow-lg">
-                <Play className="h-6 w-6 fill-current" />
-              </div>
-              <h2 className="mb-2 text-lg font-bold">Abrir vídeo no YouTube</h2>
-              <p className="mb-6 max-w-md text-sm text-gray-300 sm:text-base">
-                No iPhone, abrimos este treino externamente para evitar o erro 153 do player incorporado do YouTube.
-              </p>
-              <button
-                onClick={() => openYouTubeExternally(currentYouTubeId)}
-                className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700"
-              >
-                Assistir no YouTube
-              </button>
-            </div>
+        {shouldUseNativePlayerExperience ? (
+          <div className="p-4 sm:p-6">
+            <NativeVideoLaunchCard
+              videoId={currentYouTubeId}
+              title="Treino em tela dedicada"
+              description="No iPhone, o vídeo abre em uma janela integrada ao app para uma reprodução mais estável."
+              buttonLabel="Abrir novamente"
+              isDarkMode
+              onOpen={handleOpenCurrentVideo}
+            />
+          </div>
           ) : (
+          <div className="relative w-full aspect-video">
             <iframe
               ref={videoRef}
               className="h-full w-full"
@@ -706,8 +716,8 @@ function VideoPlayerDedicated() {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             ></iframe>
+          </div>
           )}
-        </div>
       </div>
 
       {/* Video Information */}
@@ -749,7 +759,13 @@ function VideoPlayerDedicated() {
       </div>
 
       {/* Action Buttons */}
-      <div className="p-4">
+      <div
+        className={`${isDarkMode ? 'border-y border-white/10 bg-black/55' : 'border-y border-gray-200 bg-white/95'} backdrop-blur`}
+      >
+        <div
+          className="p-4"
+          style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+        >
         <div className="flex items-center justify-between">
           <button 
             onClick={handleComplete}
@@ -790,41 +806,36 @@ function VideoPlayerDedicated() {
             <span className="text-xs font-medium">Próximo</span>
           </button>
         </div>
+        </div>
       </div>
 
 
       {/* Comments Section */}
+      {comments.length > 0 && (
       <div className="p-4">
         <h3 className="text-lg font-bold text-white mb-4">Comentários</h3>
         
-        {comments.length > 0 ? (
-          <div className="space-y-4">
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex space-x-3">
-                <div className="w-10 h-10 bg-gray-300 rounded-full flex-shrink-0"></div>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-semibold text-white">{comment.user}</span>
-                    <span className="text-gray-400 text-sm">{comment.time}</span>
-                  </div>
-                  <p className="text-gray-300 text-sm">{comment.text}</p>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <button className="text-gray-500 text-sm">Responder</button>
-                    <button className="text-gray-500">⋯</button>
-                    <button className="text-gray-500">
-                      <Heart className="w-4 h-4" />
-                    </button>
-                  </div>
+        <div className="space-y-4">
+          {comments.map((comment) => (
+            <div key={comment.id} className="flex space-x-3">
+              <div className="w-10 h-10 bg-gray-300 rounded-full flex-shrink-0"></div>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="font-semibold text-white">{comment.user}</span>
+                  <span className="text-gray-400 text-sm">{comment.time}</span>
+                </div>
+                <p className="text-gray-300 text-sm">{comment.text}</p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <button className="text-gray-500 text-sm">Responder</button>
+                  <button className="text-gray-500">⋯</button>
+                  <button className="text-gray-500">
+                    <Heart className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-400">Seja o primeiro a comentar!</p>
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
 
         {/* Comment Input */}
         <form onSubmit={handleComment} className="mt-4 flex items-center space-x-3">
@@ -843,6 +854,7 @@ function VideoPlayerDedicated() {
           </button>
         </form>
       </div>
+      )}
 
       {/* Próximos Treinos */}
       <div className="mt-8">
