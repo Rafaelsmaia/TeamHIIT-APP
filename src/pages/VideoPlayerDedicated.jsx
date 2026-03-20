@@ -72,6 +72,56 @@ const fireAnimation = `
   }
 `;
 
+let youtubeIframeApiPromise = null;
+
+const loadYouTubeIframeApi = () => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Janela indisponível para carregar YouTube Iframe API.'));
+  }
+
+  if (window.YT?.Player) {
+    return Promise.resolve(window.YT);
+  }
+
+  if (!youtubeIframeApiPromise) {
+    youtubeIframeApiPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector('script[data-youtube-iframe-api="true"]');
+
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        script.dataset.youtubeIframeApi = 'true';
+        script.onerror = () => {
+          youtubeIframeApiPromise = null;
+          reject(new Error('Falha ao carregar YouTube Iframe API.'));
+        };
+        document.head.appendChild(script);
+      }
+
+      const startedAt = Date.now();
+      const waitUntilReady = () => {
+        if (window.YT?.Player) {
+          resolve(window.YT);
+          return;
+        }
+
+        if (Date.now() - startedAt > 15000) {
+          youtubeIframeApiPromise = null;
+          reject(new Error('Timeout ao aguardar YouTube Iframe API.'));
+          return;
+        }
+
+        window.setTimeout(waitUntilReady, 100);
+      };
+
+      waitUntilReady();
+    });
+  }
+
+  return youtubeIframeApiPromise;
+};
+
 function VideoPlayerDedicated() {
   const { trainingId, videoId } = useParams();
   const navigate = useNavigate();
@@ -92,10 +142,15 @@ function VideoPlayerDedicated() {
   const [isLightingUp, setIsLightingUp] = useState(false);
   const [isExtinguishing, setIsExtinguishing] = useState(false);
   const [manualInteraction, setManualInteraction] = useState(false); // Controla se o usuário interagiu manualmente
+  const [useInlineIframeFallback, setUseInlineIframeFallback] = useState(false);
   
   const videoRef = useRef(null);
+  const playerContainerRef = useRef(null);
+  const playerInstanceRef = useRef(null);
   const playlistRef = useRef(null);
   const autoOpenedVideoRef = useRef(null);
+  const completionInFlightRef = useRef(false);
+  const completionKeyRef = useRef(null);
   const pageContentStyle = {
     paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))'
   };
@@ -106,7 +161,8 @@ function VideoPlayerDedicated() {
     
     // Resetar estado de conclusão quando o vídeo muda
     setIsCompleted(false);
-    setVideoProgress(0);
+    setIsLightingUp(false);
+    setUseInlineIframeFallback(false);
     
     // Timeout para evitar carregamento infinito
     const timeoutId = setTimeout(() => {
@@ -323,22 +379,6 @@ function VideoPlayerDedicated() {
     };
   }, [trainingId, videoId]);
 
-  // Verificar se o vídeo já foi concluído quando o componente carrega
-  useEffect(() => {
-    if (trainingId && videoId) {
-      // Usar o ProgressManager (import estático)
-      const videoKey = `${trainingId}-default-${videoId}`;
-      const isVideoAlreadyCompleted = progressManager.isVideoCompleted(trainingId, 'default', videoId);
-
-      progressManager.markVideoAccessed(trainingId, 'default', videoId);
-
-      if (isVideoAlreadyCompleted) {
-        setIsCompleted(true);
-        setVideoProgress(100);
-      }
-    }
-  }, [trainingId, videoId]);
-
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
     const regExp = /^.*(?:youtu.be\/|v\/|e\/|embed\/|watch\?v=|youtube.com\/user\/[^\/]+\/|youtube.com\/\?v=)([^#\&\?]*).*/;
@@ -348,6 +388,60 @@ function VideoPlayerDedicated() {
   const currentYouTubeId = videoData?.youtubeId || getYouTubeVideoId(videoData?.videoUrl);
   const shouldUseNativePlayerExperience = shouldUseNativeVideoExperience(currentYouTubeId);
   const youtubeEmbedUrl = buildYouTubeEmbedUrl(currentYouTubeId);
+
+  const completeCurrentVideo = useCallback(async (source = 'manual') => {
+    const effectiveVideoId = currentYouTubeId || videoId;
+    if (!trainingId || !effectiveVideoId || completionInFlightRef.current) {
+      return false;
+    }
+
+    const completionKey = `${trainingId}:default:${effectiveVideoId}`;
+    if (completionKeyRef.current === completionKey || progressManager.isVideoCompleted(trainingId, 'default', effectiveVideoId)) {
+      setIsCompleted(true);
+      setIsLightingUp(false);
+      return true;
+    }
+
+    completionInFlightRef.current = true;
+    completionKeyRef.current = completionKey;
+    setIsLightingUp(true);
+
+    try {
+      const result = await progressManager.markVideoCompleted(trainingId, 'default', effectiveVideoId);
+
+      if (!result) {
+        throw new Error('Falha ao persistir conclusão do vídeo.');
+      }
+
+      const progressSnapshot = progressManager.getProgress();
+      window.dispatchEvent(
+        new CustomEvent('videoCompleted', {
+          detail: {
+            trainingId,
+            videoId: effectiveVideoId,
+            videoKey: `${trainingId}-default-${effectiveVideoId}`,
+            title: videoData?.title,
+            progress: progressSnapshot,
+            source,
+          },
+        })
+      );
+
+      window.setTimeout(() => {
+        setIsCompleted(true);
+        setIsLightingUp(false);
+      }, 700);
+
+      return true;
+    } catch (error) {
+      console.error('❌ [VideoPlayerDedicated] Erro ao concluir vídeo:', error);
+      completionKeyRef.current = null;
+      setIsLightingUp(false);
+      return false;
+    } finally {
+      completionInFlightRef.current = false;
+    }
+  }, [currentYouTubeId, trainingId, videoData?.title, videoId]);
 
   useEffect(() => {
     const experienceKey = `${trainingId || 'training'}:${currentYouTubeId || 'video'}`;
@@ -364,6 +458,80 @@ function VideoPlayerDedicated() {
     autoOpenedVideoRef.current = experienceKey;
     void openYouTubeInPreferredExperience(currentYouTubeId);
   }, [currentYouTubeId, shouldUseNativePlayerExperience, trainingId]);
+
+  useEffect(() => {
+    const effectiveVideoId = currentYouTubeId || videoId;
+    if (!trainingId || !effectiveVideoId) {
+      return;
+    }
+
+    completionKeyRef.current = null;
+    completionInFlightRef.current = false;
+    progressManager.markVideoAccessed(trainingId, 'default', effectiveVideoId);
+    setIsCompleted(progressManager.isVideoCompleted(trainingId, 'default', effectiveVideoId));
+  }, [currentYouTubeId, trainingId, videoId]);
+
+  useEffect(() => {
+    if (shouldUseNativePlayerExperience || !currentYouTubeId || useInlineIframeFallback) {
+      if (playerInstanceRef.current?.destroy) {
+        playerInstanceRef.current.destroy();
+        playerInstanceRef.current = null;
+      }
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const mountYoutubePlayer = async () => {
+      try {
+        const YT = await loadYouTubeIframeApi();
+
+        if (cancelled || !playerContainerRef.current) {
+          return;
+        }
+
+        if (playerInstanceRef.current?.destroy) {
+          playerInstanceRef.current.destroy();
+          playerInstanceRef.current = null;
+        }
+
+        playerInstanceRef.current = new YT.Player(playerContainerRef.current, {
+          videoId: currentYouTubeId,
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            enablejsapi: 1,
+            origin: window.location.origin,
+          },
+          events: {
+            onStateChange: (event) => {
+              if (event.data === YT.PlayerState.ENDED) {
+                void completeCurrentVideo('player-ended');
+              }
+            },
+          },
+        });
+      } catch (error) {
+        console.error('❌ [VideoPlayerDedicated] Falha ao montar player do YouTube:', error);
+        if (!cancelled) {
+          setUseInlineIframeFallback(true);
+        }
+      }
+    };
+
+    mountYoutubePlayer();
+
+    return () => {
+      cancelled = true;
+      if (playerInstanceRef.current?.destroy) {
+        playerInstanceRef.current.destroy();
+        playerInstanceRef.current = null;
+      }
+    };
+  }, [completeCurrentVideo, currentYouTubeId, shouldUseNativePlayerExperience, useInlineIframeFallback]);
 
   // Removido: calculateCaloriesRange - agora usando VideoUtils.js
 
@@ -466,88 +634,15 @@ function VideoPlayerDedicated() {
     setVideoProgress(0);
     setManualInteraction(false); // Resetar interação manual para o novo vídeo
     
-    // Atualizar URL sem recarregar
-    const newUrl = `/player/${trainingId}/${video.youtubeId}`;
-    window.history.pushState(null, '', newUrl);
+    navigate(`/player/${trainingId}/${video.youtubeId}`, { replace: true });
   };
 
 
 
   const handleComplete = async () => {
     setManualInteraction(true);
-
-    if (isCompleted || !trainingId || !videoId) {
-      return;
-    }
-
-    setIsLightingUp(true);
-
-    try {
-      const result = await progressManager.markVideoCompleted(trainingId, 'default', videoId);
-
-      if (!result) {
-        console.error('❌ [VideoPlayerDedicated] Falha ao marcar vídeo como concluído');
-        setIsLightingUp(false);
-        return;
-      }
-
-      const progressSnapshot = progressManager.getProgress();
-      window.dispatchEvent(
-        new CustomEvent('videoCompleted', {
-          detail: {
-            trainingId,
-            videoId,
-            videoKey: `${trainingId}-default-${videoId}`,
-            title: videoData?.title,
-            progress: progressSnapshot,
-          },
-        })
-      );
-    } catch (error) {
-      console.error('❌ [VideoPlayerDedicated] Erro ao marcar vídeo como concluído:', error);
-      setIsLightingUp(false);
-      return;
-    }
-
-    setTimeout(() => {
-      setIsCompleted(true);
-      setIsLightingUp(false);
-    }, 1000);
+    await completeCurrentVideo('manual');
   };
-
-  // Função para detectar progresso do vídeo
-  const handleVideoProgress = () => {
-    if (videoRef.current) {
-      const iframe = videoRef.current;
-      // Como é um iframe do YouTube, não podemos acessar diretamente o progresso
-      // Vamos simular baseado no tempo decorrido
-      // Em uma implementação real, você usaria a API do YouTube
-    }
-  };
-
-  // Simular progresso do vídeo (em uma implementação real, isso viria da API do YouTube)
-  useEffect(() => {
-    if (videoData) {
-      const progressInterval = setInterval(() => {
-        setVideoProgress(prev => {
-          const newProgress = prev + Math.random() * 5; // Simular progresso
-          
-          // Automação: acender o fogo aos 80% APENAS se o usuário não interagiu manualmente
-          if (newProgress >= 80 && !isCompleted && !isLightingUp && !manualInteraction) {
-            setIsLightingUp(true);
-            setTimeout(() => {
-              setIsCompleted(true);
-              setIsLightingUp(false);
-            }, 1000);
-          }
-          
-          return Math.min(newProgress, 100);
-        });
-      }, 2000); // Atualizar a cada 2 segundos
-
-      return () => clearInterval(progressInterval);
-    }
-  }, [videoData, isCompleted, isLightingUp, manualInteraction]);
 
   const handleNotebook = () => {
     // Abrir caderno de anotações
@@ -599,9 +694,7 @@ function VideoPlayerDedicated() {
     setVideoProgress(0);
     setManualInteraction(false);
     
-    // Atualizar URL sem recarregar
-    const newUrl = `/player/${trainingId}/${targetVideo.youtubeId}`;
-    window.history.pushState(null, '', newUrl);
+    navigate(`/player/${trainingId}/${targetVideo.youtubeId}`, { replace: true });
     
   };
 
@@ -704,7 +797,7 @@ function VideoPlayerDedicated() {
               onOpen={handleOpenCurrentVideo}
             />
           </div>
-          ) : (
+          ) : useInlineIframeFallback ? (
           <div className="relative w-full aspect-video">
             <iframe
               ref={videoRef}
@@ -716,6 +809,10 @@ function VideoPlayerDedicated() {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             ></iframe>
+          </div>
+          ) : (
+          <div className="relative w-full aspect-video overflow-hidden rounded-lg bg-black">
+            <div ref={playerContainerRef} className="h-full w-full" />
           </div>
           )}
       </div>

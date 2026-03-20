@@ -410,11 +410,9 @@ function TrainingOverview() {
       category: training?.categories?.[0] || 'Treino'
     });
 
-    // Atualizar URL sem recarregar
+    // Atualizar rota para manter params sincronizados
     const newUrl = `/video/${training.id}/${video.id}/${video.youtubeId}`;
-    
-    // Usar pushState para atualizar URL sem recarregar
-    window.history.pushState(null, '', newUrl);
+    navigate(newUrl, { replace: true });
   };
 
   // Verifica se o programa tem estrutura de semanas
