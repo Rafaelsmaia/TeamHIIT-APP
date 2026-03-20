@@ -40,6 +40,9 @@ function Settings() {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
   const auth = getAuth();
+  const contentTopInsetStyle = {
+    paddingTop: 'calc(5rem + env(safe-area-inset-top, 0px))'
+  };
   const {
     requestPermission,
     revokeToken,
@@ -242,7 +245,7 @@ function Settings() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
         <Header />
-        <div className="flex items-center justify-center h-96 pt-20">
+        <div className="flex items-center justify-center h-96" style={contentTopInsetStyle}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
             <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Carregando configurações...</p>
@@ -257,7 +260,7 @@ function Settings() {
       <Header />
       
       {/* Conteúdo Principal */}
-      <div className="px-6 pb-32 pt-20">
+      <div className="px-6 pb-32" style={contentTopInsetStyle}>
         
         {/* Header da Página */}
         <div className="flex items-center mb-6">
