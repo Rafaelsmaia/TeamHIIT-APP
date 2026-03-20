@@ -159,6 +159,15 @@ export function usePWAAuth() {
           logPlatform(`Usuário autenticado: ${user.uid}`, 'debug');
           setIsAuthenticated(true);
 
+          try {
+            localStorage.setItem('authenticated', 'true');
+            localStorage.setItem('user_uid', user.uid);
+            localStorage.setItem('user_email', user.email || '');
+            logPlatform('Snapshot de autenticação salvo antes de carregar o perfil', 'debug');
+          } catch (storageError) {
+            logPlatform(`Erro ao salvar snapshot de autenticação: ${storageError.message}`, 'error');
+          }
+
           // Carregar perfil do usuário com TIMEOUT de segurança (REDUZIDO para 2s)
           try {
             const profilePromise = loadUserProfile(user);
@@ -168,16 +177,6 @@ export function usePWAAuth() {
             
             const enhancedUser = await Promise.race([profilePromise, timeoutPromise]);
           const userId = enhancedUser?.uid || user.uid;
-
-            // Salvar status no localStorage (flag rápido) + dados do usuário para cache
-            try {
-              localStorage.setItem('authenticated', 'true');
-              localStorage.setItem('user_uid', user.uid);
-              localStorage.setItem('user_email', user.email || '');
-              logPlatform('Status e dados do usuário salvos no localStorage', 'debug');
-            } catch (storageError) {
-              logPlatform(`Erro ao salvar status: ${storageError.message}`, 'error');
-            }
 
             // Carregar preferências de notificação EM BACKGROUND (não bloqueia o loading)
             NotificationService.getUserPreferences(userId)
@@ -213,6 +212,9 @@ export function usePWAAuth() {
           // Limpar localStorage
           try {
             localStorage.removeItem('authenticated');
+            localStorage.removeItem('user_uid');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('pwa_authenticated');
             logPlatform('Status de autenticação limpo', 'debug');
           } catch (storageError) {
             logPlatform(`Erro ao limpar status: ${storageError.message}`, 'error');
@@ -269,6 +271,7 @@ export function usePWAAuth() {
       localStorage.removeItem('authenticated');
       localStorage.removeItem('user_email');
       localStorage.removeItem('user_uid');
+      localStorage.removeItem('pwa_authenticated');
       
       // Estados serão atualizados automaticamente pelo onAuthStateChanged
       logPlatform('Logout realizado', 'debug');

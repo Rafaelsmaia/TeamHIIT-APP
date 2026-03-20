@@ -334,17 +334,17 @@ const TeamHIIT = () => {
       {/* Header */}
       <Header />
       
-      <div className="main-content pt-[4.5rem] pb-32">
+      <div className="main-content px-4 pt-[4.5rem] pb-32 sm:px-6">
         <div className="space-y-6">
-          <div className="px-6 mt-2">
-            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl shadow-md border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} px-4 py-3 flex items-center gap-3`}>
+          <div className="mt-2">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl shadow-md border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} px-4 py-3.5 sm:px-5 flex items-center gap-3`}>
               <Search className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar módulo por nome ou ID..."
-                className={`flex-1 bg-transparent outline-none text-sm ${
+                className={`flex-1 bg-transparent outline-none text-sm sm:text-base ${
                   isDarkMode ? 'text-white placeholder-gray-400' : 'text-gray-900 placeholder-gray-500'
                 }`}
               />
@@ -354,26 +354,26 @@ const TeamHIIT = () => {
           {/* Seções de Treinos */}
           {filteredSections.map((section, sectionIndex) => (
             <div key={section.id}>
-              <div className="px-6">
-                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
+              <div>
+                <h2 className={`text-xl font-bold sm:text-2xl ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
                   {section.title}
                 </h2>
                 {section.description && (
-                  <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-3`}>{section.description}</p>
+                  <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-3`}>{section.description}</p>
                 )}
               </div>
               
               {section.trainings.length > 0 ? (
-                <div className="overflow-x-auto md:overflow-visible scrollbar-hide">
-                  <div className="flex gap-4 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-6 pl-6 md:pl-0">
+                <div className="-mx-4 overflow-x-auto px-4 scrollbar-hide sm:mx-0 sm:px-0 md:overflow-visible">
+                  <div className="flex gap-3 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-6">
                     {section.trainings.map((training, trainingIndex) => (
                       <div
                         key={training.id}
-                        className={`relative rounded-xl shadow-lg overflow-hidden transform transition-transform duration-300 flex-shrink-0 w-40 md:w-auto aspect-[3/4] ${
+                        className={`relative rounded-xl shadow-lg overflow-hidden transform transition-transform duration-300 flex-shrink-0 w-36 sm:w-40 md:w-auto aspect-[3/4] ${
                           training.comingSoon 
                             ? 'cursor-not-allowed opacity-90' 
                             : 'cursor-pointer hover:scale-105 hover:shadow-xl'
-                        } ${trainingIndex === section.trainings.length - 1 ? 'pr-6 md:pr-0' : ''}`}
+                        } ${trainingIndex === section.trainings.length - 1 ? 'mr-1 sm:mr-0' : ''}`}
                         onClick={() => handleTrainingClick(training)}
                         title={training.title}
                       >

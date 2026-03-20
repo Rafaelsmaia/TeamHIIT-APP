@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, onAuthStateChanged } from 'firebase/auth';
-import { db } from '../firebaseConfig';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { auth, db } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 // import { useToast } from './ui/Toast.jsx'; // Removido - causava erro
 import { useTheme } from '../contexts/ThemeContext.jsx';
@@ -16,7 +16,6 @@ function PWALogin({ onLogin = null }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
-  const [loginSuccess, setLoginSuccess] = useState(false);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [lastResetAttempt, setLastResetAttempt] = useState(null);
@@ -28,46 +27,6 @@ function PWALogin({ onLogin = null }) {
     console.log(`Toast ${type}: ${message}`);
   };
   const { isDarkMode } = useTheme();
-  const auth = getAuth();
-
-  // Função para detectar se está rodando como PWA
-  const isPWA = () => {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true ||
-           document.referrer.includes('android-app://');
-  };
-
-  // Função para navegação forçada no PWA
-  const forceNavigateToDashboard = () => {
-    console.log('🚀 [PWALogin] Forçando navegação para dashboard no PWA...');
-    
-    // Tentar múltiplas formas de navegação para garantir compatibilidade
-    // No PWA do iPhone, window.location pode não funcionar imediatamente
-    try {
-      // Método 1: window.location.href (mais compatível)
-      window.location.href = '/dashboard';
-      
-      // Método 2: window.location.replace (fallback após pequeno delay)
-      setTimeout(() => {
-        if (window.location.pathname !== '/dashboard') {
-          console.log('🔄 [PWALogin] Tentativa 2: window.location.replace');
-          window.location.replace('/dashboard');
-        }
-      }, 200);
-      
-      // Método 3: window.location.assign (fallback final)
-      setTimeout(() => {
-        if (window.location.pathname !== '/dashboard') {
-          console.log('🔄 [PWALogin] Tentativa 3: window.location.assign');
-          window.location.assign('/dashboard');
-        }
-      }, 500);
-    } catch (error) {
-      console.error('❌ [PWALogin] Erro ao redirecionar:', error);
-      // Fallback: recarregar a página na rota do dashboard
-      window.location.href = window.location.origin + '/dashboard';
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -127,9 +86,14 @@ function PWALogin({ onLogin = null }) {
         });
         console.log('✅ [PWALogin] Conta criada com sucesso');
       }
-      
-      // Salvar apenas flag de autenticação (não dados sensíveis)
-      localStorage.setItem('pwa_authenticated', 'true');
+
+      // Forçar emissão do token antes de transferir o controle para o listener global de auth.
+      await userCredential.user.getIdToken();
+
+      // Salvar apenas um snapshot não sensível para o fallback do bootstrap.
+      localStorage.setItem('authenticated', 'true');
+      localStorage.setItem('user_uid', userCredential.user.uid);
+      localStorage.setItem('user_email', userCredential.user.email || '');
       
       console.log('✅ [PWALogin] Login bem-sucedido');
       
@@ -138,18 +102,6 @@ function PWALogin({ onLogin = null }) {
         console.log('🔄 [PWALogin] Chamando onLogin...');
         onLogin(true);
       }
-      
-      // Mostrar tela de sucesso brevemente
-      setLoginSuccess(true);
-      
-      // Redirecionar rapidamente
-      console.log('✅ [PWALogin] Redirecionando para dashboard...');
-      
-      // Pequeno delay para mostrar feedback visual
-      setTimeout(() => {
-        // Usar hash para compatibilidade com HashRouter
-          window.location.hash = '/dashboard';
-          }, 300);
     } catch (err) {
       console.error('❌ [PWALogin] Erro de autenticação:', err);
       console.error('❌ [PWALogin] Código do erro:', err.code);
@@ -316,68 +268,32 @@ function PWALogin({ onLogin = null }) {
     }
   };
 
-  // Tela de sucesso com botão de emergência
-  if (loginSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-4">
-        <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-2xl p-8 w-full max-w-md`}>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            
-            <h2 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Login realizado com sucesso!
-            </h2>
-            
-            <p className={`mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Redirecionando para o dashboard...
-            </p>
-            
-            {/* Botão de emergência para PWA */}
-            <button
-              onClick={() => {
-                console.log('🚨 [PWALogin] Botão de emergência clicado');
-                window.location.href = '/dashboard';
-              }}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-            >
-              Ir para Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'} flex flex-col justify-center py-12 sm:px-6 lg:px-8`}>
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'} flex flex-col justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] sm:px-6 lg:px-8`}>
+      <div className="mx-auto w-full max-w-md">
         {/* Logo */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6 sm:mb-8">
           <img
             src="/icons/icon-128.webp"
             alt="Team HIIT"
-            className="h-24 w-24 object-contain"
+            className="h-20 w-20 object-contain sm:h-24 sm:w-24"
           />
         </div>
         
         {/* Título */}
         <div className="text-center mb-6">
-          <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className={`text-2xl font-bold sm:text-3xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {isLogin ? 'Acesso ao App' : 'Criar Conta'}
           </h2>
-          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2`}>
+          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-2 text-sm sm:text-base`}>
             {isLogin ? 'Faça login para continuar' : 'Crie sua conta para começar'}
           </p>
         </div>
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} py-8 px-4 sm:rounded-lg sm:px-10`}>
-          <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="mx-auto w-full max-w-md">
+        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-2xl border shadow-sm py-6 px-4 sm:px-6`}>
+          <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
             {/* Nome Field - apenas para criação de conta */}
             {!isLogin && (
               <div>
@@ -390,7 +306,7 @@ function PWALogin({ onLogin = null }) {
                     name="displayName"
                     type="text"
                     autoComplete="name"
-                    className={`appearance-none relative block w-full px-3 py-4 border-0 border-b-2 ${isDarkMode ? 'border-gray-600 placeholder-gray-400 text-white focus:border-blue-500 bg-gray-700' : 'border-gray-300 placeholder-gray-500 text-gray-900 focus:border-blue-500 bg-transparent'} focus:outline-none focus:ring-0 focus:z-10 text-lg`}
+                    className={`appearance-none relative block w-full px-3 py-4 border-0 border-b-2 ${isDarkMode ? 'border-gray-600 placeholder-gray-400 text-white focus:border-blue-500 bg-gray-700' : 'border-gray-300 placeholder-gray-500 text-gray-900 focus:border-blue-500 bg-transparent'} focus:outline-none focus:ring-0 focus:z-10 text-base sm:text-lg`}
                     placeholder="Nome (opcional)"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
@@ -411,7 +327,7 @@ function PWALogin({ onLogin = null }) {
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none relative block w-full px-3 py-4 border-0 border-b-2 border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-0 focus:border-red-500 focus:z-10 bg-gray-100 text-lg"
+                  className={`appearance-none relative block w-full px-3 py-4 border-0 border-b-2 ${isDarkMode ? 'border-gray-600 placeholder-gray-400 text-white focus:border-blue-500 bg-gray-700' : 'border-gray-300 placeholder-gray-500 text-gray-900 focus:border-blue-500 bg-transparent'} focus:outline-none focus:ring-0 focus:z-10 text-base sm:text-lg`}
                   placeholder="E-mail"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -431,7 +347,7 @@ function PWALogin({ onLogin = null }) {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
-                  className={`appearance-none relative block w-full px-3 py-4 border-0 border-b-2 ${isDarkMode ? 'border-gray-600 placeholder-gray-400 text-white focus:border-blue-500 bg-gray-700' : 'border-gray-300 placeholder-gray-500 text-gray-900 focus:border-blue-500 bg-transparent'} focus:outline-none focus:ring-0 focus:z-10 text-lg pr-12`}
+                  className={`appearance-none relative block w-full px-3 py-4 border-0 border-b-2 ${isDarkMode ? 'border-gray-600 placeholder-gray-400 text-white focus:border-blue-500 bg-gray-700' : 'border-gray-300 placeholder-gray-500 text-gray-900 focus:border-blue-500 bg-transparent'} focus:outline-none focus:ring-0 focus:z-10 text-base sm:text-lg pr-12`}
                   placeholder="Senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -510,7 +426,7 @@ function PWALogin({ onLogin = null }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-medium rounded-full text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-base sm:text-lg font-medium rounded-full text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? (
                   <>
@@ -527,7 +443,7 @@ function PWALogin({ onLogin = null }) {
             <div className="flex justify-center mt-8">
               <button
                 type="button"
-                className={`${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'} text-lg transition-colors`}
+                className={`${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'} text-base sm:text-lg transition-colors`}
                 onClick={() => {
                   setIsLogin(!isLogin);
                   setError('');

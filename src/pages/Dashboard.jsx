@@ -813,11 +813,11 @@ function Dashboard() {
 
       {/* 2. CONTEÚDO DO DASHBOARD com a compensação de padding */}
       {/* pt-[4.5rem] (18 * 0.25rem) - padding ajustado para compensar o header fixo */}
-      <div className="px-6 pb-32 pt-[4.5rem] main-content">
+      <div className="px-4 pb-32 pt-[4.5rem] main-content sm:px-6">
         
         {/* SEÇÃO DE SAUDAÇÃO (O que estava faltando) */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             
             {/* Foto de Perfil e Nome */}
             <div className="relative">
@@ -832,26 +832,28 @@ function Dashboard() {
               </div>
             </div>
             
-            <div>
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className="min-w-0">
+              <h1 className={`text-xl font-bold leading-tight sm:text-2xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 Olá, {getFirstName()} 💪
               </h1>
-              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{getCurrentDate()}</p>
+              <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{getCurrentDate()}</p>
             </div>
           </div>
           
           {/* Botão de Notificação Simples */}
-          <SimpleNotificationButton isDarkMode={isDarkMode} />
+          <div className="self-end sm:self-auto">
+            <SimpleNotificationButton isDarkMode={isDarkMode} />
+          </div>
         </div>
 
         {/* 3. Today's Workout Section - Carrossel */}
-        <div className="mb-4 -mx-6">
-          <div className="mb-3 px-6">
+        <div className="mb-4 -mx-4 sm:-mx-6">
+          <div className="mb-3 px-4 sm:px-6">
             <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Treinos para hoje</h2>
           </div>
           
           {loading ? (
-            <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-blue-500'} rounded-xl shadow-lg p-6 text-center mx-6`}>
+            <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-blue-500'} rounded-xl shadow-lg p-6 text-center mx-4 sm:mx-6`}>
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
               <p className="text-white">Carregando seus treinos...</p>
             </div>
@@ -939,10 +941,10 @@ function Dashboard() {
                           key={`${item.trainingId}-${index}`}
                           className="flex-shrink-0 snap-center snap-always"
                           style={{
-                            width: 'calc(100vw - 3rem)',
-                            maxWidth: 'calc(100vw - 3rem)',
-                            marginLeft: index === 0 ? '1.5rem' : '1rem',
-                            marginRight: index === carouselItems.length - 1 ? '1.5rem' : '1rem'
+                            width: 'min(calc(100vw - 2rem), 28rem)',
+                            maxWidth: '28rem',
+                            marginLeft: index === 0 ? '1rem' : '0.75rem',
+                            marginRight: index === carouselItems.length - 1 ? '1rem' : '0.75rem'
                           }}
                         >
                           {/* Card do Treino */}
@@ -1097,13 +1099,13 @@ function Dashboard() {
         {/* Widget "Ofensiva de treinos" */}
         <div className="mb-4">
           <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Ofensiva de treinos</h3>
-          <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl shadow-lg p-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl shadow-lg p-4 sm:p-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
           
           {/* Nomes dos Dias */}
-          <div className="grid grid-cols-7 gap-6 mb-4">
+          <div className="grid grid-cols-7 gap-2 mb-4 sm:gap-4 md:gap-6">
             {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dayName, index) => (
               <div key={index} className="flex justify-center">
-                <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <span className={`text-[10px] font-medium sm:text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {dayName}
                 </span>
               </div>
@@ -1111,7 +1113,7 @@ function Dashboard() {
           </div>
 
           {/* Círculos de Fogo - Dias da Semana */}
-          <div className="grid grid-cols-7 gap-6">
+          <div className="grid grid-cols-7 gap-2 sm:gap-4 md:gap-6">
             {(() => {
               // Só renderizar se userProgress estiver carregado
               if (!userProgress) {
@@ -1149,8 +1151,8 @@ function Dashboard() {
         </div>
 
         {/* Meu Progresso - Carrossel de Métricas */}
-        <div className="mb-4 -mx-6">
-          <div className="mb-4 px-6">
+        <div className="mb-4 -mx-4 sm:-mx-6">
+          <div className="mb-4 px-4 sm:px-6">
             <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Meu Progresso</h2>
           </div>
           
@@ -1167,10 +1169,10 @@ function Dashboard() {
             <div 
               className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 flex-shrink-0 snap-center snap-always border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}
               style={{
-                width: 'calc(100vw - 3rem)',
-                maxWidth: 'calc(100vw - 3rem)',
-                marginLeft: '1.5rem',
-                marginRight: '1rem'
+                width: 'min(calc(100vw - 2rem), 28rem)',
+                maxWidth: '28rem',
+                marginLeft: '1rem',
+                marginRight: '0.75rem'
               }}
             >
               {/* Header com Total */}
@@ -1181,7 +1183,7 @@ function Dashboard() {
                   </div>
                   <h3 className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Calorias Queimadas</h3>
                 </div>
-                <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
+                <div className={`text-3xl font-bold sm:text-4xl ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
                   {weeklyCaloriesTotal.toLocaleString()}
                 </div>
                 <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -1206,7 +1208,7 @@ function Dashboard() {
 
 
               {/* Gráfico de Barras - 7 dias da semana */}
-              <div className="flex items-end justify-between gap-2 h-24 mb-2">
+              <div className="flex items-end justify-between gap-1.5 h-24 mb-2 sm:gap-2">
                 {(() => {
                   const today = new Date();
                   const startOfWeek = new Date(today);
@@ -1305,10 +1307,10 @@ function Dashboard() {
             <div 
               className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 flex-shrink-0 snap-center snap-always border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}
               style={{
-                width: 'calc(100vw - 3rem)',
-                maxWidth: 'calc(100vw - 3rem)',
-                marginLeft: '1rem',
-                marginRight: '1.5rem'
+                width: 'min(calc(100vw - 2rem), 28rem)',
+                maxWidth: '28rem',
+                marginLeft: '0.75rem',
+                marginRight: '1rem'
               }}
             >
               {/* Header com Total */}
@@ -1319,7 +1321,7 @@ function Dashboard() {
                   </div>
                   <h3 className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tempo de Treino</h3>
                 </div>
-                <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
+                <div className={`text-3xl font-bold sm:text-4xl ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
                   {(() => {
                     if (!userProgress) {
                       return '0min';
@@ -1347,7 +1349,7 @@ function Dashboard() {
               </div>
 
               {/* Gráfico de Barras - 7 dias da semana */}
-              <div className="flex items-end justify-between gap-2 h-24 mb-2">
+              <div className="flex items-end justify-between gap-1.5 h-24 mb-2 sm:gap-2">
                 {(() => {
                   const today = new Date();
                   const startOfWeek = new Date(today);
@@ -1443,17 +1445,17 @@ function Dashboard() {
         <HabitTrackerSection currentUser={currentUser} isDarkMode={isDarkMode} addToast={addToast} />
 
         {/* Container de Suporte */}
-        <div className="mt-6 mb-6 -mx-6">
+        <div className="mt-6 mb-6 -mx-4 sm:-mx-6">
           <div 
             className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-2xl shadow-lg p-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}
             style={{
-              width: 'calc(100vw - 3rem)',
-              maxWidth: 'calc(100vw - 3rem)',
-              marginLeft: '1.5rem',
+              width: 'min(calc(100vw - 2rem), 28rem)',
+              maxWidth: '28rem',
+              marginLeft: '1rem',
               marginRight: '1rem'
             }}
           >
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               {/* Ícone de Fone de Ouvido */}
               <div className={`w-16 h-16 ${isDarkMode ? 'bg-orange-900/30' : 'bg-orange-50'} rounded-full flex items-center justify-center flex-shrink-0`}>
                 <Headphones className={`w-8 h-8 ${isDarkMode ? 'text-orange-500' : 'text-orange-600'}`} />

@@ -66,6 +66,9 @@ function AppContent() {
   const [hideSplashOverlay, setHideSplashOverlay] = useState(false);
   const { isAuthenticated, loading, login, currentUser } = usePWAAuth();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const auth = getAuth();
+  const currentAuthUser = auth.currentUser;
+  const isReallyAuthenticated = isAuthenticated || currentAuthUser !== null;
 
   // Detectar prompt de instalação do PWA
   useEffect(() => {
@@ -107,13 +110,13 @@ function AppContent() {
 
   useEffect(() => {
     // Remover dependência de preloadingDone - não deve bloquear o acesso
-    if (!loading && isAuthenticated) {
+    if (!loading && isReallyAuthenticated) {
       const timer = setTimeout(() => {
         setHideSplashOverlay(true);
       }, 250);
       return () => clearTimeout(timer);
     }
-  }, [loading, isAuthenticated]);
+  }, [loading, isReallyAuthenticated]);
 
   // Aguardar o loading completar antes de verificar autenticação
   // Isso evita race conditions onde o estado ainda não foi atualizado
@@ -122,10 +125,6 @@ function AppContent() {
   }
 
   // Verificar também auth.currentUser diretamente para evitar race conditions
-  const auth = getAuth();
-  const currentAuthUser = auth.currentUser;
-  const isReallyAuthenticated = isAuthenticated || currentAuthUser !== null;
-
   // Verificar se está na rota de login automático (deve ser acessível sem autenticação)
   const currentHash = window.location.hash;
   const isAutoLoginRoute = currentHash === '#/auto-login' || 
