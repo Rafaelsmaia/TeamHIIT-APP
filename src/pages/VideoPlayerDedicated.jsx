@@ -697,9 +697,9 @@ function VideoPlayerDedicated() {
           <div className="p-4 sm:p-6">
             <NativeVideoLaunchCard
               videoId={currentYouTubeId}
-              title="Treino em tela dedicada"
-              description="No iPhone, o vídeo abre em uma janela integrada ao app para uma reprodução mais estável."
-              buttonLabel="Abrir novamente"
+              title={videoData?.title || 'Assistir treino'}
+              description=""
+              buttonLabel="Assistir treino"
               isDarkMode
               onOpen={handleOpenCurrentVideo}
             />

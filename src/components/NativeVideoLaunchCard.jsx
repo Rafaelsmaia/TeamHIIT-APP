@@ -4,12 +4,13 @@ import { getYouTubeThumbnailUrl } from '../utils/mediaHelpers.js';
 function NativeVideoLaunchCard({
   videoId,
   title = 'Assistir treino',
-  description = 'O vídeo abre em uma janela integrada ao app para uma reprodução mais estável.',
+  description = '',
   buttonLabel = 'Abrir treino',
   isDarkMode = true,
   onOpen,
 }) {
   const thumbnailUrl = getYouTubeThumbnailUrl(videoId, 'hqdefault');
+  const hasDescription = typeof description === 'string' && description.trim().length > 0;
 
   return (
     <button
@@ -38,8 +39,10 @@ function NativeVideoLaunchCard({
           <Play className="h-6 w-6 fill-current" />
         </div>
         <p className="text-xl font-bold text-white sm:text-2xl">{title}</p>
-        <p className="mt-2 max-w-lg text-sm text-white/85 sm:text-base">{description}</p>
-        <span className="mt-5 inline-flex w-fit items-center rounded-full bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-900/30">
+        {hasDescription && (
+          <p className="mt-2 max-w-lg text-sm text-white/85 sm:text-base">{description}</p>
+        )}
+        <span className={`${hasDescription ? 'mt-5' : 'mt-3'} inline-flex w-fit items-center rounded-full bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-900/30`}>
           {buttonLabel}
         </span>
       </div>

@@ -673,8 +673,8 @@ function TrainingOverview() {
                   {shouldUseNativePlayerExperience ? (
                     <NativeVideoLaunchCard
                       videoId={currentYouTubeId}
-                      title="Assistir treino"
-                      description="O vídeo abre em uma janela integrada ao app para uma reprodução mais estável no iPhone."
+                      title={videoData?.title || 'Assistir treino'}
+                      description=""
                       buttonLabel="Abrir treino"
                       isDarkMode={isDarkMode}
                       onOpen={handleOpenCurrentVideo}
