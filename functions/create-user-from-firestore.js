@@ -60,16 +60,13 @@ async function createUserFromFirestore(email) {
     // 2. Verificar se já existe no Firebase Auth
     console.log("\n2️⃣ Verificando Firebase Authentication...");
     let firebaseUser;
-    let isNewUser = false;
 
     try {
       firebaseUser = await admin.auth().getUserByEmail(email);
       console.log(`✅ Usuário já existe no Firebase Auth: ${firebaseUser.uid}`);
-      isNewUser = false;
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
         // Criar novo usuário
-        isNewUser = true;
         const tempPassword = generateRandomPassword(name);
         firebaseUser = await admin.auth().createUser({
           email: email,

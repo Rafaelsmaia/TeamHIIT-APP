@@ -27,6 +27,7 @@ lerna-debug.log*
 .env.production.local
 
 # Arquivos de configuração sensíveis
+secrets/
 serviceAccount.json
 functions/serviceAccount.json
 serviceAccountKey.json

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { db } from '../firebaseConfig';
-import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { CheckCircle, XCircle, Loader } from 'lucide-react';
+import { resolveAccessLink } from '../services/AuthLinkService.js';
 
 function AutoLogin() {
   const [searchParams] = useSearchParams();
@@ -36,57 +35,16 @@ function AutoLogin() {
       setValidating(true);
       setLoading(true);
 
-      // Buscar token e senha temporária no Firestore
-      const userCredentialDoc = await getDoc(doc(db, 'user_credentials', email));
-      
-      if (!userCredentialDoc.exists()) {
-        setError('Token inválido ou expirado. Use suas credenciais para fazer login manualmente.');
-        setValidating(false);
-        setLoading(false);
-        return;
-      }
-
-      const data = userCredentialDoc.data();
-      
-      // Verificar se o token corresponde
-      if (!data.autoLoginToken || data.autoLoginToken !== token) {
-        setError('Token inválido ou expirado. Use suas credenciais para fazer login manualmente.');
-        setValidating(false);
-        setLoading(false);
-        return;
-      }
-
-      // Verificar se o token não expirou (24 horas)
-      if (data.autoLoginTokenExpiresAt) {
-        const expiresAt = data.autoLoginTokenExpiresAt.toDate();
-        if (expiresAt < new Date()) {
-          setError('Token expirado. Use suas credenciais para fazer login manualmente.');
-          setValidating(false);
-          setLoading(false);
-          return;
-        }
-      }
-
       setTokenValid(true);
-
-      // Obter senha temporária
-      const tempPassword = data.tempPassword;
-      if (!tempPassword) {
-        setError('Credenciais não encontradas. Use o email e senha do email para fazer login.');
-        setValidating(false);
-        setLoading(false);
-        return;
-      }
 
       // Fazer login automático
       const auth = getAuth();
-      await signInWithEmailAndPassword(auth, email, tempPassword);
-      
-      // Remover token após uso bem-sucedido
-      await updateDoc(doc(db, 'user_credentials', email), {
-        autoLoginToken: deleteField(),
-        autoLoginTokenExpiresAt: deleteField(),
+      const result = await resolveAccessLink({
+        email,
+        token,
+        type: 'auto-login'
       });
+      await signInWithCustomToken(auth, result.customToken);
 
       setSuccess(true);
       
@@ -119,7 +77,9 @@ function AutoLogin() {
           errorMessage = 'Erro de conexão. Verifique sua internet.';
           break;
         default:
-          errorMessage = err.message || 'Erro ao fazer login automático.';
+          errorMessage =
+            err.message ||
+            'Erro ao fazer login automático.';
       }
       
       setError(errorMessage);

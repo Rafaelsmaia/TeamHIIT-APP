@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, CheckCircle, XCircle } from 'lucide-react';
-import { getAuth, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
-import { db } from '../firebaseConfig';
-import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
+import {
+  getAuth,
+  signInWithCustomToken,
+  updatePassword
+} from 'firebase/auth';
 import { useTheme } from '../contexts/ThemeContext.jsx';
+import {
+  completePasswordSetup,
+  resolveAccessLink,
+  validateAccessLink
+} from '../services/AuthLinkService.js';
 
 function CreatePassword() {
   const [searchParams] = useSearchParams();
@@ -36,38 +43,15 @@ function CreatePassword() {
     }
 
     try {
-      // Buscar token no Firestore (por email, que é o ID do documento)
-      const userCredentialDoc = await getDoc(doc(db, 'user_credentials', email));
-      
-      if (!userCredentialDoc.exists()) {
-        setError('Token inválido ou expirado. Solicite um novo link.');
-        setValidating(false);
-        return;
-      }
-
-      const data = userCredentialDoc.data();
-      
-      // Verificar se o token corresponde
-      if (!data.passwordToken || data.passwordToken !== token) {
-        setError('Token inválido ou expirado. Solicite um novo link.');
-        setValidating(false);
-        return;
-      }
-
-      // Verificar se o token não expirou (24 horas)
-      if (data.passwordTokenExpiresAt) {
-        const expiresAt = data.passwordTokenExpiresAt.toDate();
-        if (expiresAt < new Date()) {
-          setError('Token expirado. Solicite um novo link.');
-          setValidating(false);
-          return;
-        }
-      }
-
+      await validateAccessLink({
+        email,
+        token,
+        type: 'create-password'
+      });
       setTokenValid(true);
     } catch (err) {
       console.error('Erro ao validar token:', err);
-      setError('Erro ao validar token. Tente novamente.');
+      setError(err.message || 'Erro ao validar token. Tente novamente.');
     } finally {
       setValidating(false);
     }
@@ -110,29 +94,25 @@ function CreatePassword() {
 
     try {
       const auth = getAuth();
-      
-      // Primeiro, fazer login com a senha temporária
-      // A senha temporária está salva em user_credentials
-      const userCredentialDoc = await getDoc(doc(db, 'user_credentials', email));
-      if (!userCredentialDoc.exists()) {
-        throw new Error('Credenciais não encontradas');
-      }
 
-      const tempPassword = userCredentialDoc.data().tempPassword;
-      
-      // Fazer login com senha temporária
-      const userCredential = await signInWithEmailAndPassword(auth, email, tempPassword);
+      const result = await resolveAccessLink({
+        email,
+        token,
+        type: 'create-password'
+      });
+
+      const userCredential = await signInWithCustomToken(
+        auth,
+        result.customToken
+      );
       
       // Atualizar senha
       await updatePassword(userCredential.user, password);
-      
-      // Remover token e senha temporária do Firestore
-      await updateDoc(doc(db, 'user_credentials', email), {
-        passwordToken: deleteField(),
-        passwordTokenExpiresAt: deleteField(),
-        tempPassword: deleteField(),
-        passwordCreated: true,
-        passwordCreatedAt: new Date()
+
+      const idToken = await userCredential.user.getIdToken();
+      await completePasswordSetup({
+        email,
+        idToken
       });
 
       setSuccess(true);

@@ -41,6 +41,199 @@ setGlobalOptions({
   region: "us-central1",
 });
 
+const corsHeaders = (req, res) => {
+  const origin = req.headers.origin || "*";
+  res.set("Access-Control-Allow-Origin", origin);
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With"
+  );
+  res.set("Access-Control-Max-Age", "3600");
+};
+
+const getCredentialsDocByEmail = async (email) => {
+  return admin.firestore().collection("user_credentials").doc(email).get();
+};
+
+const ensureCredentialsDoc = async (email) => {
+  const docSnapshot = await getCredentialsDocByEmail(email);
+
+  if (!docSnapshot.exists) {
+    throw new Error("Token inválido ou expirado.");
+  }
+
+  return docSnapshot;
+};
+
+const validateAccessPayload = (payload) => {
+  const {email, token, type} = payload || {};
+
+  if (!email || !token || !type) {
+    throw new Error("Parâmetros obrigatórios ausentes.");
+  }
+
+  if (!["auto-login", "create-password"].includes(type)) {
+    throw new Error("Tipo de acesso inválido.");
+  }
+
+  return {email, token, type};
+};
+
+const validateTokenData = (data, token, type) => {
+  const tokenField =
+    type === "auto-login" ? "autoLoginToken" : "passwordToken";
+  const expiresField =
+    type === "auto-login" ?
+      "autoLoginTokenExpiresAt" :
+      "passwordTokenExpiresAt";
+
+  if (!data[tokenField] || data[tokenField] !== token) {
+    throw new Error("Token inválido ou expirado.");
+  }
+
+  const expiresAt = data[expiresField]?.toDate?.();
+  if (expiresAt && expiresAt < new Date()) {
+    throw new Error("Token expirado.");
+  }
+};
+
+const getUidForEmailAccess = async (email, data) => {
+  if (data.uid) {
+    return data.uid;
+  }
+
+  const userRecord = await admin.auth().getUserByEmail(email);
+  return userRecord.uid;
+};
+
+exports.resolveEmailAccess = onRequest({
+  cors: true,
+  maxInstances: 10,
+  timeoutSeconds: 30,
+}, async (req, res) => {
+  corsHeaders(req, res);
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      success: false,
+      message: "Apenas requisições POST são permitidas.",
+    });
+  }
+
+  try {
+    const {email, token, type} = validateAccessPayload(req.body);
+    const validateOnly = req.body?.validateOnly === true;
+    const credentialsDoc = await ensureCredentialsDoc(email);
+    const data = credentialsDoc.data();
+
+    validateTokenData(data, token, type);
+
+    if (validateOnly) {
+      return res.status(200).json({success: true, valid: true});
+    }
+
+    const uid = await getUidForEmailAccess(email, data);
+    const customToken = await admin.auth().createCustomToken(uid, {
+      accessFlow: type,
+    });
+
+    if (type === "auto-login") {
+      await credentialsDoc.ref.set({
+        autoLoginToken: admin.firestore.FieldValue.delete(),
+        autoLoginTokenExpiresAt: admin.firestore.FieldValue.delete(),
+        lastAutoLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, {merge: true});
+    }
+
+    return res.status(200).json({
+      success: true,
+      customToken,
+    });
+  } catch (error) {
+    console.error("❌ [resolveEmailAccess] Erro:", error);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Falha ao validar link de acesso.",
+    });
+  }
+});
+
+exports.completePasswordSetup = onRequest({
+  cors: true,
+  maxInstances: 10,
+  timeoutSeconds: 30,
+}, async (req, res) => {
+  corsHeaders(req, res);
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      success: false,
+      message: "Apenas requisições POST são permitidas.",
+    });
+  }
+
+  try {
+    const authHeader = req.headers.authorization || "";
+    const tokenMatch = authHeader.match(/^Bearer (.+)$/);
+    const email = req.body?.email;
+
+    if (!tokenMatch || !email) {
+      return res.status(401).json({
+        success: false,
+        message: "Autorização inválida.",
+      });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(tokenMatch[1]);
+    const userRecord = await admin.auth().getUser(decodedToken.uid);
+
+    if (!userRecord.email ||
+      userRecord.email.toLowerCase() !== email.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuário não autorizado para concluir esta operação.",
+      });
+    }
+
+    const credentialsDoc = await ensureCredentialsDoc(email);
+    const uidDoc = await admin.firestore()
+        .collection("user_credentials")
+        .doc(decodedToken.uid)
+        .get();
+
+    const patch = {
+      passwordToken: admin.firestore.FieldValue.delete(),
+      passwordTokenExpiresAt: admin.firestore.FieldValue.delete(),
+      tempPassword: admin.firestore.FieldValue.delete(),
+      passwordCreated: true,
+      passwordCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await credentialsDoc.ref.set(patch, {merge: true});
+
+    if (uidDoc.exists) {
+      await uidDoc.ref.set(patch, {merge: true});
+    }
+
+    return res.status(200).json({success: true});
+  } catch (error) {
+    console.error("❌ [completePasswordSetup] Erro:", error);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Falha ao finalizar criação de senha.",
+    });
+  }
+});
+
 /**
  * Função principal do webhook da Greenn
  * 
