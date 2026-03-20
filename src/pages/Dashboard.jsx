@@ -448,6 +448,30 @@ function Dashboard() {
     return null;
   };
 
+  const navigateToTrainingEntry = (item) => {
+    if (!item) {
+      return;
+    }
+
+    if (item.isComeceAqui) {
+      navigate(`/video/${item.trainingId || 'comece-aqui'}`, { replace: true });
+      return;
+    }
+
+    if (item.nextVideo?.videoId) {
+      navigate(`/player/${item.trainingId}/${item.nextVideo.videoId}`, { replace: true });
+      return;
+    }
+
+    const firstVideoId = getFirstVideoId(item.trainingId);
+    if (firstVideoId) {
+      navigate(`/player/${item.trainingId}/${firstVideoId}`, { replace: true });
+      return;
+    }
+
+    navigate('/dashboard');
+  };
+
   // Carregar o usuário atual do Firebase
   useEffect(() => {
     const auth = getAuth();
@@ -954,22 +978,7 @@ function Dashboard() {
                           <div
                             className={`relative rounded-2xl overflow-hidden cursor-pointer mb-3 shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
                             style={{ height: '14rem' }}
-                            onClick={() => {
-                              if (item.isComeceAqui) {
-                                navigate('/player/comece-aqui/f7KNh2jRf5I', { replace: true });
-                              } else {
-                                if (item.nextVideo) {
-                                  navigate(`/player/${item.trainingId}/${item.nextVideo.videoId}`, { replace: true });
-                                } else {
-                                  const firstVideoId = getFirstVideoId(item.trainingId);
-                                  if (firstVideoId) {
-                                    navigate(`/player/${item.trainingId}/${firstVideoId}`, { replace: true });
-                                  } else {
-                                    navigate('/dashboard');
-                                  }
-                                }
-                              }
-                            }}
+                            onClick={() => navigateToTrainingEntry(item)}
                           >
                         {/* Banner Background */}
                         <div className="relative h-full">
@@ -1063,22 +1072,7 @@ function Dashboard() {
                           {/* Botão Iniciar Treino */}
                           <button
                             style={{ marginTop: '1.5rem' }}
-                            onClick={() => {
-                              if (item.isComeceAqui) {
-                                navigate('/player/comece-aqui/f7KNh2jRf5I', { replace: true });
-                              } else {
-                                if (item.nextVideo) {
-                                  navigate(`/player/${item.trainingId}/${item.nextVideo.videoId}`, { replace: true });
-                                } else {
-                                  const firstVideoId = getFirstVideoId(item.trainingId);
-                                  if (firstVideoId) {
-                                    navigate(`/player/${item.trainingId}/${firstVideoId}`, { replace: true });
-                                  } else {
-                                    navigate('/dashboard');
-                                  }
-                                }
-                              }
-                            }}
+                            onClick={() => navigateToTrainingEntry(item)}
                             className={`w-full ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} rounded-full py-4 px-6 flex items-center justify-center gap-2 transition-all duration-300 hover:opacity-90 active:scale-95`}
                           >
                             <span className="text-base font-bold text-white">
