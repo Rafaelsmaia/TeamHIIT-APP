@@ -13,7 +13,7 @@ export const PlatformConfig = {
   isAndroid: Capacitor.getPlatform() === 'android',
   isIOS: Capacitor.getPlatform() === 'ios',
   isWeb: Capacitor.getPlatform() === 'web',
-  isCommunityEnabled: Capacitor.getPlatform() !== 'ios',
+  isCommunityEnabled: true,
   
   // Detecção PWA (apenas para web)
   isPWA: (() => {
