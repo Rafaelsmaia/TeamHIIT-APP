@@ -31,6 +31,10 @@ const TeamHIIT = () => {
   
   // Usar o hook de tema
   const { isDarkMode } = useTheme();
+  const contentShellStyle = {
+    paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))',
+    paddingBottom: 'calc(10rem + env(safe-area-inset-bottom, 0px))'
+  };
 
   // Scroll para o topo quando a página é carregada
   useEffect(() => {
@@ -335,8 +339,8 @@ const TeamHIIT = () => {
       <Header />
       
       <div
-        className="main-content px-4 pb-32 sm:px-6"
-        style={{ paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))' }}
+        className="main-content px-4 sm:px-6"
+        style={contentShellStyle}
       >
         <div className="space-y-6">
           <div className="mt-2">
