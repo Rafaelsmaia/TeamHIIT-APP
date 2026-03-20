@@ -641,7 +641,10 @@ function VideoPlayerDedicated() {
       
       
       {/* Header Personalizado do Projeto */}
-      <div className={`${isDarkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'} px-4 py-3 flex items-center justify-between`}>
+      <div
+        className={`${isDarkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'} flex items-center justify-between px-4 pb-3`}
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
+      >
         <button
           onClick={() => navigate('/dashboard')}
           className={`${isDarkMode ? 'text-white hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-100'} p-2 rounded-lg transition-colors`}

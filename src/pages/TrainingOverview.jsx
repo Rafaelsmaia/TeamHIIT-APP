@@ -577,7 +577,10 @@ function TrainingOverview() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gradient-to-br from-black via-blue-900/20 to-blue-800/30 text-gray-100' : 'bg-white text-gray-900'} overflow-x-hidden`}>
       {/* Header Personalizado do Projeto */}
-      <div className={`${isDarkMode ? 'bg-gradient-to-br from-black via-blue-900/20 to-blue-800/30 border-b border-gray-800' : 'bg-white border-b border-gray-200'} px-4 py-3 flex items-center justify-between`}>
+      <div
+        className={`${isDarkMode ? 'bg-gradient-to-br from-black via-blue-900/20 to-blue-800/30 border-b border-gray-800' : 'bg-white border-b border-gray-200'} flex items-center justify-between px-4 pb-3`}
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
+      >
         <button
           onClick={() => navigate('/dashboard')}
           className={`${isDarkMode ? 'text-white hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'} p-2 rounded-lg transition-colors`}

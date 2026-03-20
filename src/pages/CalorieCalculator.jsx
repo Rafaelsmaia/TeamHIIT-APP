@@ -21,6 +21,7 @@ function CalorieCalculator() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
+  const pageContentStyle = { paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))' };
 
   // Verificar se há uma imagem pendente do botão de câmera do BottomNavigation
   useEffect(() => {
@@ -148,7 +149,7 @@ function CalorieCalculator() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <Header />
-        <div className="pt-16 pb-24 px-4 max-w-lg mx-auto flex items-center justify-center min-h-[60vh]">
+        <div className="pb-24 px-4 max-w-lg mx-auto flex items-center justify-center min-h-[60vh]" style={pageContentStyle}>
           <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
         </div>
         <BottomNavigation />
@@ -161,7 +162,7 @@ function CalorieCalculator() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <Header />
-        <div className="pt-16 pb-24 px-4 max-w-lg mx-auto">
+        <div className="pb-24 px-4 max-w-lg mx-auto" style={pageContentStyle}>
           <div className="text-center py-12">
             {/* Ícone de bloqueio */}
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 mb-6">
@@ -211,7 +212,7 @@ function CalorieCalculator() {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Header />
       
-      <div className="pt-16 pb-24 px-4 max-w-lg mx-auto">
+      <div className="pb-24 px-4 max-w-lg mx-auto" style={pageContentStyle}>
         {/* Título */}
         <div className="text-center py-6">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 mb-4">

@@ -813,7 +813,10 @@ function Dashboard() {
 
       {/* 2. CONTEÚDO DO DASHBOARD com a compensação de padding */}
       {/* pt-[4.5rem] (18 * 0.25rem) - padding ajustado para compensar o header fixo */}
-      <div className="px-4 pb-32 pt-[4.5rem] main-content sm:px-6">
+      <div
+        className="main-content px-4 pb-32 sm:px-6"
+        style={{ paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))' }}
+      >
         
         {/* SEÇÃO DE SAUDAÇÃO (O que estava faltando) */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -841,7 +844,7 @@ function Dashboard() {
           </div>
           
           {/* Botão de Notificação Simples */}
-          <div className="self-end sm:self-auto">
+          <div className="self-start sm:self-auto">
             <SimpleNotificationButton isDarkMode={isDarkMode} />
           </div>
         </div>
