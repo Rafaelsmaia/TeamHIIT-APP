@@ -1,6 +1,14 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth, signOut } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  inMemoryPersistence,
+  signOut
+} from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
 
@@ -18,8 +26,25 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 const storage = getStorage(app);
+
+const createAuth = () => {
+  try {
+    return initializeAuth(app, {
+      persistence: [
+        indexedDBLocalPersistence,
+        browserLocalPersistence,
+        browserSessionPersistence,
+        inMemoryPersistence
+      ]
+    });
+  } catch (error) {
+    console.warn('⚠️ Fallback para getAuth(app):', error);
+    return getAuth(app);
+  }
+};
+
+const auth = createAuth();
 
 // Função para limpar dados de autenticação na primeira instalação
 // IMPORTANTE: Preserva a autenticação se o usuário já estiver logado

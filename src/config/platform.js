@@ -32,7 +32,7 @@ export const PlatformConfig = {
     // Android nativo
     android: {
       timeout: 5000, // Reduzido de 15s para 5s
-      enableDebugOverlay: true,
+      enableDebugOverlay: false,
       skipServiceWorker: true,
       onboardingKey: 'onboarding_shown'
     },
@@ -40,7 +40,7 @@ export const PlatformConfig = {
     // iOS nativo  
     ios: {
       timeout: 15000,
-      enableDebugOverlay: true,
+      enableDebugOverlay: false,
       skipServiceWorker: true,
       onboardingKey: 'onboarding_shown'
     },

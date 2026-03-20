@@ -11,6 +11,7 @@ import AppFallback from './components/AppFallback.jsx';
 
 // Debug visual para apps nativos - cria um overlay de status
 const createDebugOverlay = (message, type = 'info') => {
+  if (!import.meta.env.DEV) return; // Nunca mostrar overlay de debug em release
   if (!PlatformConfig.isNative) return; // Só no modo nativo
   const platformSettings = getCurrentPlatformConfig();
   if (!platformSettings?.enableDebugOverlay) return;
