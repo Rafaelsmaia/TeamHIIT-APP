@@ -8,34 +8,9 @@ const CommunityImage = ({ src, alt, className, fallbackSrc = COMMUNITY_FALLBACK_
   const [imageSrc, setImageSrc] = useState(src || fallbackSrc);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verificar se é uma URL de blob (local) - não deve usar crossOrigin
-  const isBlobUrl = src && src.startsWith('blob:');
-
   useEffect(() => {
-    if (!src) {
-      setImageSrc(fallbackSrc);
-      setIsLoading(false);
-      return;
-    }
-
-    const img = new window.Image();
-    
-    // Adicionar crossOrigin para URLs remotas (não blob)
-    if (!src.startsWith('blob:')) {
-      img.crossOrigin = 'anonymous';
-    }
-    
-    img.onload = () => {
-      setImageSrc(src);
-      setIsLoading(false);
-    };
-    
-    img.onerror = () => {
-      setImageSrc(fallbackSrc);
-      setIsLoading(false);
-    };
-
-    img.src = src;
+    setImageSrc(src || fallbackSrc);
+    setIsLoading(Boolean(src));
   }, [src, fallbackSrc]);
 
   return (
@@ -51,8 +26,14 @@ const CommunityImage = ({ src, alt, className, fallbackSrc = COMMUNITY_FALLBACK_
         alt={alt}
         className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-150`}
         loading="eager"
-        {...(!isBlobUrl && { crossOrigin: "anonymous" })}
-        referrerPolicy="no-referrer"
+        onLoad={() => setIsLoading(false)}
+        onError={() => {
+          if (imageSrc !== fallbackSrc) {
+            setImageSrc(fallbackSrc);
+          } else {
+            setIsLoading(false);
+          }
+        }}
         style={{
           WebkitTransform: 'translateZ(0)',
           transform: 'translateZ(0)',

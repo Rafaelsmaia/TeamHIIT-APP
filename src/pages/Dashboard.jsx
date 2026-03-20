@@ -849,8 +849,8 @@ function Dashboard() {
       >
         
         {/* SEÇÃO DE SAUDAÇÃO (O que estava faltando) */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
             
             {/* Foto de Perfil e Nome */}
             <div className="relative">
@@ -874,7 +874,7 @@ function Dashboard() {
           </div>
           
           {/* Botão de Notificação Simples */}
-          <div className="self-start sm:self-auto">
+          <div className="flex-shrink-0 self-auto">
             <SimpleNotificationButton isDarkMode={isDarkMode} />
           </div>
         </div>
@@ -1457,14 +1457,14 @@ function Dashboard() {
               marginRight: '1rem'
             }}
           >
-            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <div className="flex items-start gap-4">
               {/* Ícone de Fone de Ouvido */}
               <div className={`w-16 h-16 ${isDarkMode ? 'bg-orange-900/30' : 'bg-orange-50'} rounded-full flex items-center justify-center flex-shrink-0`}>
                 <Headphones className={`w-8 h-8 ${isDarkMode ? 'text-orange-500' : 'text-orange-600'}`} />
               </div>
 
               {/* Texto e Link */}
-              <div className="flex-1">
+              <div className="min-w-0 flex-1 pt-1">
                 <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-800'} mb-2`}>
                   <span className="font-bold">Precisa de ajuda?</span> Estamos sempre
                 </p>
