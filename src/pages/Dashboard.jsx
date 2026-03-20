@@ -982,8 +982,8 @@ function Dashboard() {
                         >
                           {/* Card do Treino */}
                           <div
-                            className={`relative rounded-2xl overflow-hidden cursor-pointer mb-3 shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
-                            style={{ height: '14rem' }}
+                            className={`relative rounded-2xl overflow-hidden cursor-pointer mb-2 shadow-lg border sm:mb-3 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                            style={{ height: 'clamp(11.75rem, 52vw, 14rem)' }}
                             onClick={() => navigateToTrainingEntry(item, 'card')}
                           >
                         {/* Banner Background */}
@@ -1012,10 +1012,10 @@ function Dashboard() {
                           </div>
 
                           {/* Widgets abaixo do card */}
-                          <div className="flex gap-3">
+                          <div className="flex gap-2 sm:gap-3">
                             {/* Widget 1: Progresso do Módulo */}
-                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-50'} rounded-xl p-4 flex flex-col items-center justify-center shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                              <p className={`text-xs font-bold mb-2 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-50'} rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                              <p className={`mb-2 text-center text-[11px] font-bold sm:text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Progresso do Módulo
                               </p>
                               <div className="relative w-16 h-16">
@@ -1049,27 +1049,27 @@ function Dashboard() {
                             </div>
 
                             {/* Widget 2: Tempo do Treino */}
-                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-100'} rounded-xl p-4 flex flex-col items-center justify-center`}>
-                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2">
-                                <Clock className="w-5 h-5 text-blue-500" />
+                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-100'} rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
+                              <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-white sm:h-10 sm:w-10">
+                                <Clock className="h-4 w-4 text-blue-500 sm:h-5 sm:w-5" />
                               </div>
-                              <p className={`text-lg font-extrabold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <p className={`mb-1 text-base font-extrabold sm:text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {item.duration}
                               </p>
-                              <p className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <p className={`text-center text-[11px] font-bold sm:text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Tempo do Treino
                               </p>
                             </div>
 
                             {/* Widget 3: Calorias do Treino */}
-                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-100'} rounded-xl p-4 flex flex-col items-center justify-center`}>
-                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2">
-                                <Flame className="w-5 h-5 text-blue-500" />
+                            <div className={`flex-1 ${isDarkMode ? 'bg-gray-800' : 'bg-blue-100'} rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center`}>
+                              <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-white sm:h-10 sm:w-10">
+                                <Flame className="h-4 w-4 text-blue-500 sm:h-5 sm:w-5" />
                               </div>
-                              <p className={`text-lg font-extrabold mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <p className={`mb-1 text-base font-extrabold sm:text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {item.calories ? item.calories.replace(' kcal', '') : '300-500'}
                               </p>
-                              <p className={`text-xs font-bold text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <p className={`text-center text-[11px] font-bold sm:text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Calorias do Treino
                               </p>
                             </div>
@@ -1077,14 +1077,13 @@ function Dashboard() {
 
                           {/* Botão Iniciar Treino */}
                           <button
-                            style={{ marginTop: '1.5rem' }}
                             onClick={() => navigateToTrainingEntry(item, 'cta')}
-                            className={`w-full ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} rounded-full py-4 px-6 flex items-center justify-center gap-2 transition-all duration-300 hover:opacity-90 active:scale-95`}
+                            className={`mt-4 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 transition-all duration-300 hover:opacity-90 active:scale-95 sm:mt-6 sm:py-4 ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'}`}
                           >
-                            <span className="text-base font-bold text-white">
+                            <span className="text-sm font-bold text-white sm:text-base">
                               Iniciar treino
                             </span>
-                            <span className="text-lg font-bold text-white">
+                            <span className="text-base font-bold text-white sm:text-lg">
                               →
                             </span>
                           </button>
