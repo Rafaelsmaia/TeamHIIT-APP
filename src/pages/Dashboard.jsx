@@ -448,12 +448,18 @@ function Dashboard() {
     return null;
   };
 
-  const navigateToTrainingEntry = (item) => {
+  const navigateToTrainingEntry = (item, source = 'card') => {
     if (!item) {
       return;
     }
 
     if (item.isComeceAqui) {
+      if (source === 'cta') {
+        const firstVideoId = item.nextVideo?.videoId || getFirstVideoId(item.trainingId || 'comece-aqui') || 'f7KNh2jRf5I';
+        navigate(`/player/${item.trainingId || 'comece-aqui'}/${firstVideoId}`, { replace: true });
+        return;
+      }
+
       navigate(`/video/${item.trainingId || 'comece-aqui'}`, { replace: true });
       return;
     }
@@ -978,7 +984,7 @@ function Dashboard() {
                           <div
                             className={`relative rounded-2xl overflow-hidden cursor-pointer mb-3 shadow-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
                             style={{ height: '14rem' }}
-                            onClick={() => navigateToTrainingEntry(item)}
+                            onClick={() => navigateToTrainingEntry(item, 'card')}
                           >
                         {/* Banner Background */}
                         <div className="relative h-full">
@@ -1072,7 +1078,7 @@ function Dashboard() {
                           {/* Botão Iniciar Treino */}
                           <button
                             style={{ marginTop: '1.5rem' }}
-                            onClick={() => navigateToTrainingEntry(item)}
+                            onClick={() => navigateToTrainingEntry(item, 'cta')}
                             className={`w-full ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} rounded-full py-4 px-6 flex items-center justify-center gap-2 transition-all duration-300 hover:opacity-90 active:scale-95`}
                           >
                             <span className="text-base font-bold text-white">
