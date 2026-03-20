@@ -26,6 +26,7 @@
     margin: 0 !important;
     padding: 0 !important;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
     /* Altura total da viewport, incluindo a área do notch */
     height: 100vh !important;
     min-height: 100vh !important;
@@ -36,6 +37,7 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overscroll-behavior-y: none;
   }
 
   /* Ajustar o header para respeitar a safe area no topo */
