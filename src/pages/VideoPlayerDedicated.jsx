@@ -148,7 +148,6 @@ function VideoPlayerDedicated() {
   const playerContainerRef = useRef(null);
   const playerInstanceRef = useRef(null);
   const playlistRef = useRef(null);
-  const autoOpenedVideoRef = useRef(null);
   const completionInFlightRef = useRef(false);
   const completionKeyRef = useRef(null);
   const pageShellStyle = {
@@ -445,22 +444,6 @@ function VideoPlayerDedicated() {
       completionInFlightRef.current = false;
     }
   }, [currentYouTubeId, trainingId, videoData?.title, videoId]);
-
-  useEffect(() => {
-    const experienceKey = `${trainingId || 'training'}:${currentYouTubeId || 'video'}`;
-
-    if (!shouldUseNativePlayerExperience || !currentYouTubeId) {
-      autoOpenedVideoRef.current = null;
-      return;
-    }
-
-    if (autoOpenedVideoRef.current === experienceKey) {
-      return;
-    }
-
-    autoOpenedVideoRef.current = experienceKey;
-    void openYouTubeInPreferredExperience(currentYouTubeId);
-  }, [currentYouTubeId, shouldUseNativePlayerExperience, trainingId]);
 
   useEffect(() => {
     const effectiveVideoId = currentYouTubeId || videoId;
