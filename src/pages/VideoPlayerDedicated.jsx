@@ -151,6 +151,9 @@ function VideoPlayerDedicated() {
   const autoOpenedVideoRef = useRef(null);
   const completionInFlightRef = useRef(false);
   const completionKeyRef = useRef(null);
+  const pageShellStyle = {
+    paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))'
+  };
   const pageContentStyle = {
     paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))'
   };
@@ -762,7 +765,10 @@ function VideoPlayerDedicated() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gradient-to-br from-black via-blue-900/20 to-blue-800/30 text-white' : 'bg-white text-gray-900'}`}>
+    <div
+      className={`min-h-screen ${isDarkMode ? 'bg-gradient-to-br from-black via-blue-900/20 to-blue-800/30 text-white' : 'bg-white text-gray-900'}`}
+      style={pageShellStyle}
+    >
       {/* Adicionar estilos CSS */}
       <style>{fireAnimation}</style>
       
