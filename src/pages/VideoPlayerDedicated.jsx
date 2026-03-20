@@ -25,6 +25,8 @@ import { getVideoDuration } from '../utils/VideoDurations.js';
 import { calculateCaloriesRange } from '../utils/VideoUtils.js';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { buildYouTubeEmbedUrl, openYouTubeExternally } from '../utils/mediaHelpers.js';
+import { PlatformConfig } from '../config/platform.js';
 
 // Estilos CSS para animação do fogo
 const fireAnimation = `
@@ -89,6 +91,9 @@ function VideoPlayerDedicated() {
   
   const videoRef = useRef(null);
   const playlistRef = useRef(null);
+  const pageContentStyle = {
+    paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))'
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -335,6 +340,9 @@ function VideoPlayerDedicated() {
     const match = url.match(regExp);
     return (match && match[1].length === 11) ? match[1] : null;
   };
+  const currentYouTubeId = videoData?.youtubeId || getYouTubeVideoId(videoData?.videoUrl);
+  const shouldUseExternalYoutubeFallback = PlatformConfig.isNative && PlatformConfig.isIOS && Boolean(currentYouTubeId);
+  const youtubeEmbedUrl = buildYouTubeEmbedUrl(currentYouTubeId);
 
   // Removido: calculateCaloriesRange - agora usando VideoUtils.js
 
@@ -600,7 +608,7 @@ function VideoPlayerDedicated() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'}`}>
         <Header />
-        <div className="flex items-center justify-center h-96">
+        <div className="flex min-h-[60vh] items-center justify-center px-4" style={pageContentStyle}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
             <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Carregando vídeo...</p>
@@ -614,7 +622,7 @@ function VideoPlayerDedicated() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'}`}>
         <Header />
-        <div className="flex items-center justify-center h-96">
+        <div className="flex min-h-[60vh] items-center justify-center px-4" style={pageContentStyle}>
           <div className="text-center">
             <div className="text-red-500 mb-4">
               <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -660,16 +668,45 @@ function VideoPlayerDedicated() {
       {/* Video Player */}
       <div className="relative bg-black">
         <div className="relative w-full aspect-video">
-          {/* YouTube Embed */}
-          <iframe
-            ref={videoRef}
-            className="w-full h-full"
-            src={`https://www.youtube.com/embed/${videoData.youtubeId || getYouTubeVideoId(videoData.videoUrl)}?autoplay=0&controls=1&rel=0&modestbranding=1`}
-            title={videoData.title}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+          {shouldUseExternalYoutubeFallback ? (
+            <div
+              className="flex h-full w-full cursor-pointer flex-col items-center justify-center px-6 text-center text-white"
+              onClick={() => openYouTubeExternally(currentYouTubeId)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openYouTubeExternally(currentYouTubeId);
+                }
+              }}
+            >
+              <div className="mb-4 rounded-full bg-red-600 p-4 shadow-lg">
+                <Play className="h-6 w-6 fill-current" />
+              </div>
+              <h2 className="mb-2 text-lg font-bold">Abrir vídeo no YouTube</h2>
+              <p className="mb-6 max-w-md text-sm text-gray-300 sm:text-base">
+                No iPhone, abrimos este treino externamente para evitar o erro 153 do player incorporado do YouTube.
+              </p>
+              <button
+                onClick={() => openYouTubeExternally(currentYouTubeId)}
+                className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700"
+              >
+                Assistir no YouTube
+              </button>
+            </div>
+          ) : (
+            <iframe
+              ref={videoRef}
+              className="h-full w-full"
+              src={youtubeEmbedUrl}
+              title={videoData.title}
+              frameBorder="0"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          )}
         </div>
       </div>
 

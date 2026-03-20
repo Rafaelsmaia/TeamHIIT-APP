@@ -334,7 +334,10 @@ const TeamHIIT = () => {
       {/* Header */}
       <Header />
       
-      <div className="main-content px-4 pt-[4.5rem] pb-32 sm:px-6">
+      <div
+        className="main-content px-4 pb-32 sm:px-6"
+        style={{ paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))' }}
+      >
         <div className="space-y-6">
           <div className="mt-2">
             <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl shadow-md border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} px-4 py-3.5 sm:px-5 flex items-center gap-3`}>

@@ -64,3 +64,43 @@ export const getYouTubeVideoId = (url) => {
   }
   return null;
 };
+
+export const buildYouTubeEmbedUrl = (videoId) => {
+  if (!videoId) return null;
+
+  const origin = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : 'https://localhost';
+
+  const params = new URLSearchParams({
+    autoplay: '0',
+    controls: '1',
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    enablejsapi: '1',
+    origin,
+  });
+
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+};
+
+export const buildYouTubeWatchUrl = (videoId) => {
+  if (!videoId) return null;
+  return `https://www.youtube.com/watch?v=${videoId}`;
+};
+
+export const openYouTubeExternally = (videoId) => {
+  const url = buildYouTubeWatchUrl(videoId);
+  if (!url || typeof window === 'undefined') {
+    return false;
+  }
+
+  const popup = window.open(url, '_blank');
+
+  if (!popup) {
+    window.location.href = url;
+  }
+
+  return true;
+};

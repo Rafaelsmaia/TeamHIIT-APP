@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Clock, User, Send, MessageCircle, Lock, Crown, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Clock, User, Send, MessageCircle, Lock, Crown, MoreHorizontal, Play } from 'lucide-react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { reportContent, blockUser, loadBlockedUserIds } from '../services/ModerationService';
@@ -11,6 +11,8 @@ import { usePWAAuth } from '../hooks/UsePWAAuth.js';
 import progressManager from '../utils/ProgressManager.js';
 import { getVideoDuration } from '../utils/VideoDurations.js';
 import InstantImage from '../components/InstantImage.jsx';
+import { buildYouTubeEmbedUrl, openYouTubeExternally } from '../utils/mediaHelpers.js';
+import { PlatformConfig } from '../config/platform.js';
 
 // Helper function to get YouTube video ID
 const getYouTubeVideoId = (url) => {
@@ -56,6 +58,9 @@ function TrainingOverview() {
   const [blockedUserIds, setBlockedUserIds] = useState(new Set());
   const [openMenuForComment, setOpenMenuForComment] = useState({});
   const [shouldShowPresentation, setShouldShowPresentation] = useState(true);
+  const contentTopInsetStyle = {
+    paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))'
+  };
   
   const auth = getAuth();
   const db = getFirestore();
@@ -537,12 +542,15 @@ function TrainingOverview() {
     const isPresentation = video.title && video.title.toLowerCase().includes('apresentação');
     return !isPresentation;
   });
+  const currentYouTubeId = videoData?.youtubeId || getYouTubeVideoId(videoData?.videoUrl);
+  const shouldUseExternalYoutubeFallback = PlatformConfig.isNative && PlatformConfig.isIOS && Boolean(currentYouTubeId);
+  const youtubeEmbedUrl = buildYouTubeEmbedUrl(currentYouTubeId);
 
   if (loading) {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
         <Header />
-        <div className="flex items-center justify-center h-96">
+        <div className="flex min-h-[60vh] items-center justify-center px-4" style={contentTopInsetStyle}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
             <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Carregando vídeo...</p>
@@ -556,7 +564,7 @@ function TrainingOverview() {
     return (
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
         <Header />
-        <div className="container mx-auto px-4 py-8 pt-24 max-w-full">
+        <div className="container mx-auto max-w-full px-4 py-8" style={contentTopInsetStyle}>
           <div className="text-center">
             <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Vídeo não encontrado</h1>
             <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-6`}>
@@ -646,16 +654,48 @@ function TrainingOverview() {
                   </h3>
                 </div>
                 <div className="p-4 md:p-6">
-                  <div className="relative w-full overflow-hidden" style={{ paddingBottom: '56.25%' }}>
-                    <iframe
-                      className="absolute top-0 left-0 w-full h-full rounded-lg"
-                      src={`https://www.youtube.com/embed/${videoData.youtubeId}`}
-                      title={videoData.title}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
-                  </div>
+                  {shouldUseExternalYoutubeFallback ? (
+                    <div
+                      className={`flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border px-6 py-8 text-center ${
+                      isDarkMode ? 'border-gray-700 bg-black/40 text-white' : 'border-gray-200 bg-gray-50 text-gray-900'
+                      }`}
+                      onClick={() => openYouTubeExternally(currentYouTubeId)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openYouTubeExternally(currentYouTubeId);
+                        }
+                      }}
+                    >
+                      <div className="mb-4 rounded-full bg-red-600 p-4 text-white shadow-lg">
+                        <Play className="h-6 w-6 fill-current" />
+                      </div>
+                      <h4 className="mb-2 text-lg font-bold">Abrir vídeo no YouTube</h4>
+                      <p className={`mb-6 max-w-md text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        No iPhone, este vídeo é aberto externamente para evitar o erro 153 do player incorporado do YouTube no WKWebView.
+                      </p>
+                      <button
+                        onClick={() => openYouTubeExternally(currentYouTubeId)}
+                        className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700"
+                      >
+                        Assistir no YouTube
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative w-full overflow-hidden" style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        className="absolute top-0 left-0 h-full w-full rounded-lg"
+                        src={youtubeEmbedUrl}
+                        title={videoData.title}
+                        frameBorder="0"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  )}
                   
                   {/* Botão para marcar vídeo como concluído (para testes) */}
                 </div>
