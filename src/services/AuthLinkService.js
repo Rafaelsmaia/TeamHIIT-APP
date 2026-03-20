@@ -1,5 +1,5 @@
 const FUNCTIONS_BASE_URL =
-  'https://us-central1-comunidade-team-hiit.cloudfunctions.net';
+  'https://us-central1-comunidade-team-hiit.cloudfunctions.net/health';
 
 async function postJson(path, body, headers = {}) {
   const response = await fetch(`${FUNCTIONS_BASE_URL}/${path}`, {

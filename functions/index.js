@@ -107,24 +107,7 @@ const getUidForEmailAccess = async (email, data) => {
   return userRecord.uid;
 };
 
-exports.resolveEmailAccess = onRequest({
-  cors: true,
-  maxInstances: 10,
-  timeoutSeconds: 30,
-}, async (req, res) => {
-  corsHeaders(req, res);
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      success: false,
-      message: "Apenas requisições POST são permitidas.",
-    });
-  }
-
+const handleResolveEmailAccess = async (req, res) => {
   try {
     const {email, token, type} = validateAccessPayload(req.body);
     const validateOnly = req.body?.validateOnly === true;
@@ -161,26 +144,9 @@ exports.resolveEmailAccess = onRequest({
       message: error.message || "Falha ao validar link de acesso.",
     });
   }
-});
+};
 
-exports.completePasswordSetup = onRequest({
-  cors: true,
-  maxInstances: 10,
-  timeoutSeconds: 30,
-}, async (req, res) => {
-  corsHeaders(req, res);
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      success: false,
-      message: "Apenas requisições POST são permitidas.",
-    });
-  }
-
+const handleCompletePasswordSetup = async (req, res) => {
   try {
     const authHeader = req.headers.authorization || "";
     const tokenMatch = authHeader.match(/^Bearer (.+)$/);
@@ -232,7 +198,7 @@ exports.completePasswordSetup = onRequest({
       message: error.message || "Falha ao finalizar criação de senha.",
     });
   }
-});
+};
 
 /**
  * Função principal do webhook da Greenn
@@ -385,7 +351,35 @@ exports.greennWebhook = onRequest({
  */
 exports.health = onRequest({
   cors: true,
-}, (req, res) => {
+}, async (req, res) => {
+  corsHeaders(req, res);
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
+  if (req.path === "/resolveEmailAccess") {
+    if (req.method !== "POST") {
+      return res.status(405).json({
+        success: false,
+        message: "Apenas requisições POST são permitidas.",
+      });
+    }
+
+    return handleResolveEmailAccess(req, res);
+  }
+
+  if (req.path === "/completePasswordSetup") {
+    if (req.method !== "POST") {
+      return res.status(405).json({
+        success: false,
+        message: "Apenas requisições POST são permitidas.",
+      });
+    }
+
+    return handleCompletePasswordSetup(req, res);
+  }
+
   return res.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),
