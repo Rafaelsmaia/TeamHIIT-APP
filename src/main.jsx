@@ -145,6 +145,11 @@ const waitForDOM = () => {
 // Função para aguardar recursos críticos
 const waitForCriticalResources = () => {
   return new Promise((resolve) => {
+    if (PlatformConfig.isNative) {
+      resolve();
+      return;
+    }
+
     // Aguardar um pouco para garantir que todos os recursos foram carregados
     setTimeout(resolve, 100);
   });
