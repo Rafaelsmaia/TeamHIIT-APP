@@ -4,6 +4,7 @@ const CAMERA_CAPTURE_UNAVAILABLE_MESSAGE = 'Não foi possível concluir a captur
 const CAMERA_CAPTURE_FALLBACK_MESSAGE = `${CAMERA_CAPTURE_UNAVAILABLE_MESSAGE}\n\nDeseja escolher uma imagem da galeria agora?`;
 const IOS_CAMERA_RETURN_THRESHOLD_MS = 2500;
 const IOS_CAMERA_FEEDBACK_DELAY_MS = 400;
+let activeCameraAttemptCleanup = null;
 
 export const openFileInput = (input, source = 'arquivo') => {
   const isDisconnected = typeof input?.isConnected === 'boolean' ? !input.isConnected : false;
@@ -55,6 +56,16 @@ const offerCameraGalleryFallback = (galleryInput) => {
   }
 };
 
+const clearActiveCameraAttempt = () => {
+  if (typeof activeCameraAttemptCleanup !== 'function') {
+    return;
+  }
+
+  const cleanup = activeCameraAttemptCleanup;
+  activeCameraAttemptCleanup = null;
+  cleanup();
+};
+
 const watchNativeIOSCameraReturn = (cameraInput, galleryInput) => {
   if (typeof window === 'undefined' || typeof document === 'undefined' || !cameraInput || !isNativeIOS()) {
     return () => {};
@@ -62,7 +73,7 @@ const watchNativeIOSCameraReturn = (cameraInput, galleryInput) => {
 
   const openedAt = Date.now();
   let leftApp = false;
-  let handled = false;
+  let settled = false;
   let feedbackTimerId = null;
 
   const clearFeedbackTimer = () => {
@@ -76,33 +87,56 @@ const watchNativeIOSCameraReturn = (cameraInput, galleryInput) => {
     clearFeedbackTimer();
     window.removeEventListener('blur', handleBlur);
     window.removeEventListener('focus', handleFocus);
+    window.removeEventListener('pagehide', handleBlur);
+    window.removeEventListener('pageshow', handleFocus);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     cameraInput.removeEventListener('change', handleChange);
+    cameraInput.removeEventListener('cancel', handleCancel);
+
+    if (activeCameraAttemptCleanup === cleanup) {
+      activeCameraAttemptCleanup = null;
+    }
+  };
+
+  const settle = (onSettled) => {
+    if (settled) {
+      return;
+    }
+
+    settled = true;
+    cleanup();
+    onSettled?.();
   };
 
   const handleChange = () => {
-    handled = true;
-    cleanup();
+    settle();
+  };
+
+  const handleCancel = () => {
+    settle(() => offerCameraGalleryFallback(galleryInput));
   };
 
   const scheduleFeedback = () => {
-    if (!leftApp || handled) {
+    if (!leftApp || settled) {
       return;
     }
 
     clearFeedbackTimer();
     feedbackTimerId = window.setTimeout(() => {
-      if (handled) {
+      if (settled) {
         cleanup();
         return;
       }
 
       const elapsed = Date.now() - openedAt;
-      cleanup();
+      const hasSelectedFile = (cameraInput.files?.length || 0) > 0;
 
-      if (elapsed <= IOS_CAMERA_RETURN_THRESHOLD_MS) {
-        offerCameraGalleryFallback(galleryInput);
+      if (hasSelectedFile || elapsed > IOS_CAMERA_RETURN_THRESHOLD_MS) {
+        settle();
+        return;
       }
+
+      settle(() => offerCameraGalleryFallback(galleryInput));
     }, IOS_CAMERA_FEEDBACK_DELAY_MS);
   };
 
@@ -125,10 +159,16 @@ const watchNativeIOSCameraReturn = (cameraInput, galleryInput) => {
     }
   };
 
-  cameraInput.addEventListener('change', handleChange, { once: true });
+  clearActiveCameraAttempt();
+
+  cameraInput.addEventListener('change', handleChange);
+  cameraInput.addEventListener('cancel', handleCancel);
   window.addEventListener('blur', handleBlur);
   window.addEventListener('focus', handleFocus);
+  window.addEventListener('pagehide', handleBlur);
+  window.addEventListener('pageshow', handleFocus);
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  activeCameraAttemptCleanup = cleanup;
 
   return cleanup;
 };
