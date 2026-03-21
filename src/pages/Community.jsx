@@ -85,6 +85,7 @@ function Community() {
   const [commentContent, setCommentContent] = useState({});
   const [showComments, setShowComments] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
+  const [currentUserPhotoURL, setCurrentUserPhotoURL] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [userInteractions, setUserInteractions] = useState({});
   const [selectedImages, setSelectedImages] = useState([]);
@@ -201,12 +202,18 @@ function Community() {
           if (snapshot.exists()) {
             const data = snapshot.data();
             setIsAdmin(Boolean(data?.isAdmin));
+            setCurrentUserPhotoURL(data?.photoURL || user.photoURL || '');
           } else {
             setIsAdmin(false);
+            setCurrentUserPhotoURL(user.photoURL || '');
           }
-        }).catch(() => setIsAdmin(false));
+        }).catch(() => {
+          setIsAdmin(false);
+          setCurrentUserPhotoURL(user.photoURL || '');
+        });
       } else {
         setIsAdmin(false);
+        setCurrentUserPhotoURL('');
       }
     });
     return unsubscribe;
@@ -366,7 +373,7 @@ function Community() {
       const basicPosts = querySnapshot.docs.map(docSnapshot => ({
         id: docSnapshot.id,
         ...docSnapshot.data(),
-        authorPhotoURL: '', // Será preenchido depois
+        authorPhotoURL: docSnapshot.data().authorPhotoURL || '',
         commentsList: [] // Será preenchido depois
       }));
       
@@ -378,11 +385,14 @@ function Community() {
         if (postData.authorId) {
           promises.push(
             getDoc(doc(db, 'users', postData.authorId)).then(userDocSnap => {
-              return userDocSnap.exists() ? userDocSnap.data().photoURL || '' : '';
-            }).catch(() => '')
+              if (!userDocSnap.exists()) {
+                return postData.authorPhotoURL || '';
+              }
+              return userDocSnap.data().photoURL || postData.authorPhotoURL || '';
+            }).catch(() => postData.authorPhotoURL || '')
           );
         } else {
-          promises.push(Promise.resolve(''));
+          promises.push(Promise.resolve(postData.authorPhotoURL || ''));
         }
         
         // Buscar comentários
@@ -397,9 +407,12 @@ function Community() {
                 if (commentData.authorId) {
                   try {
                     const userDocSnap = await getDoc(doc(db, 'users', commentData.authorId));
-                    commenterPhotoURL = userDocSnap.exists() ? userDocSnap.data().photoURL || '' : '';
+                    commenterPhotoURL = userDocSnap.exists()
+                      ? userDocSnap.data().photoURL || commentData.authorPhotoURL || ''
+                      : commentData.authorPhotoURL || '';
                   } catch (error) {
                     console.warn('Erro ao buscar foto do comentarista:', error);
+                    commenterPhotoURL = commentData.authorPhotoURL || '';
                   }
                 }
                 return { ...commentData, authorPhotoURL: commenterPhotoURL };
@@ -623,7 +636,7 @@ function Community() {
         content: newPostContent,
         author: currentUser.displayName || currentUser.email,
         authorId: currentUser.uid,
-        authorPhotoURL: currentUser.photoURL || '',
+        authorPhotoURL: currentUserPhotoURL || currentUser.photoURL || '',
         timestamp: serverTimestamp(),
         likes: 0,
         comments: 0,
@@ -788,7 +801,7 @@ function Community() {
         content: content,
         author: currentUser.displayName || currentUser.email,
         authorId: currentUser.uid,
-        authorPhotoURL: currentUser.photoURL || '',
+        authorPhotoURL: currentUserPhotoURL || currentUser.photoURL || '',
         timestamp: serverTimestamp()
       };
       
@@ -846,9 +859,9 @@ function Community() {
             {/* Post Creation Form */}
             <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl shadow-lg p-4 md:p-6 border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
               <div className="flex items-start space-x-3 mb-4">
-                {currentUser?.photoURL ? (
+                {currentUserPhotoURL || currentUser?.photoURL ? (
                   <CommunityImage 
-                    src={currentUser.photoURL} 
+                    src={currentUserPhotoURL || currentUser?.photoURL} 
                     alt="Your Avatar" 
                     className="w-10 h-10 rounded-full object-cover" 
                   />
@@ -1163,8 +1176,8 @@ function Community() {
 
                       {/* Comment Input */}
                       <div className="flex items-center space-x-3 mb-4">
-                        {currentUser?.photoURL ? (
-                          <CommunityImage src={currentUser.photoURL} alt="Your Avatar" className="w-8 h-8 rounded-full object-cover" />
+                        {currentUserPhotoURL || currentUser?.photoURL ? (
+                          <CommunityImage src={currentUserPhotoURL || currentUser?.photoURL} alt="Your Avatar" className="w-8 h-8 rounded-full object-cover" />
                         ) : (
                           <div className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} flex items-center justify-center text-gray-400`}>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">

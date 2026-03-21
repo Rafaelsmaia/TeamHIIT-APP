@@ -856,11 +856,11 @@ function Dashboard() {
             <div className="relative">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md flex items-center justify-center">
                 <ProfilePhoto
-                  src={currentUser?.photoURL || ''}
+                  src={userProfile?.photoURL || currentUser?.photoURL || ''}
                   alt="Foto de perfil"
                   size="lg"
                   className="w-full h-full"
-                  fallbackText={currentUser?.displayName || currentUser?.email}
+                  fallbackText={userProfile?.displayName || currentUser?.displayName || currentUser?.email}
                 />
               </div>
             </div>
