@@ -74,7 +74,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { Send, ThumbsUp, MessageCircle, PlusCircle, Camera, Image, X, Heart, MoreHorizontal } from 'lucide-react';
 import { reportContent, blockUser, loadBlockedUserIds } from '../services/ModerationService';
 import AnnouncementsTab from '../components/community/AnnouncementsTab.jsx'
-import { openFileInput, alertFileInputUnavailable } from '../utils/fileInput.js';
+import { openFileInput, openCameraInput, alertFileInputUnavailable } from '../utils/fileInput.js';
 
 // Cache global para posts da comunidade
 let communityPostsCache = null;
@@ -478,9 +478,7 @@ function Community() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCameraPicker = () => {
-    if (!openFileInput(cameraInputRef.current, 'camera')) {
-      alertFileInputUnavailable('camera');
-    }
+    openCameraInput(cameraInputRef.current, galleryInputRef.current);
   };
 
   const openGalleryPicker = () => {

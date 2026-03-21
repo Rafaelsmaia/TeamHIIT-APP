@@ -2,12 +2,13 @@ import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Instagram, User, Dumbbell, Camera, X, Utensils } from 'lucide-react';
 import { PlatformConfig } from '../../config/platform.js';
-import { openFileInput, alertFileInputUnavailable } from '../../utils/fileInput.js';
+import { openCameraInput } from '../../utils/fileInput.js';
 
 function BottomNavigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   
   // Estados para o modal de opções
   const [capturedImage, setCapturedImage] = useState(null);
@@ -249,9 +250,7 @@ function BottomNavigation() {
   };
 
   const openCameraPicker = () => {
-    if (!openFileInput(cameraInputRef.current, 'camera')) {
-      alertFileInputUnavailable('camera');
-    }
+    openCameraInput(cameraInputRef.current, galleryInputRef.current);
   };
 
   // Ocultar o menu inferior na página de apresentação do vídeo (VideoPlayer) e no player dedicado
@@ -306,6 +305,13 @@ function BottomNavigation() {
   return (
     <>
       {/* Input oculto para câmera */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleCameraCapture}
+        className="hidden"
+      />
       <input
         ref={cameraInputRef}
         type="file"

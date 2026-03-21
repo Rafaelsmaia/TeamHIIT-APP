@@ -11,7 +11,7 @@ import ProfilePhoto from '../components/ProfilePhoto.jsx';
 import BottomNavigation from '../components/ui/BottomNavigation.jsx';
 import CircularProfileCropModal from '../components/CircularProfileCropModal.jsx';
 import { PlatformConfig } from '../config/platform.js';
-import { openFileInput, alertFileInputUnavailable } from '../utils/fileInput.js';
+import { openFileInput, openCameraInput, alertFileInputUnavailable } from '../utils/fileInput.js';
 
 function Profile() {
   const auth = getAuth();
@@ -604,9 +604,7 @@ function Profile() {
   };
 
   const openCameraPicker = () => {
-    if (!openFileInput(cameraInputRef.current, 'camera')) {
-      alertFileInputUnavailable('camera');
-    }
+    openCameraInput(cameraInputRef.current, galleryInputRef.current);
   };
 
   const openGalleryPicker = () => {

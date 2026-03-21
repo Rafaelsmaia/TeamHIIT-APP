@@ -5,7 +5,7 @@ import Header from '../components/ui/Header.jsx';
 import BottomNavigation from '../components/ui/BottomNavigation.jsx';
 import { fileToBase64 } from '../services/GeminiService.js';
 import { usePWAAuth } from '../hooks/UsePWAAuth.js';
-import { openFileInput, alertFileInputUnavailable } from '../utils/fileInput.js';
+import { openFileInput, openCameraInput, alertFileInputUnavailable } from '../utils/fileInput.js';
 
 // URL da Firebase Function (recriada)
 const CALCULATE_CALORIES_URL = 'https://us-central1-comunidade-team-hiit.cloudfunctions.net/calculateCalories';
@@ -146,9 +146,7 @@ function CalorieCalculator() {
   }, []);
 
   const openCameraPicker = () => {
-    if (!openFileInput(cameraInputRef.current, 'camera')) {
-      alertFileInputUnavailable('camera');
-    }
+    openCameraInput(cameraInputRef.current, galleryInputRef.current);
   };
 
   const openGalleryPicker = () => {
