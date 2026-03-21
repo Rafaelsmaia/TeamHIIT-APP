@@ -78,6 +78,9 @@ export const getCommunityCacheStatus = () => {
 function Community() {
   const location = useLocation();
   const { isDarkMode } = useTheme();
+  const contentTopInsetStyle = {
+    paddingTop: 'calc(4.75rem + env(safe-area-inset-top, 0px))'
+  };
   const [activeTab, setActiveTab] = useState('feed');
   const [newPostContent, setNewPostContent] = useState('');
   const [posts, setPosts] = useState([]);
@@ -834,7 +837,7 @@ function Community() {
       {/* Header */}
       <Header />
       
-      <div ref={mainContentRef} className="main-content pt-[4.5rem] pb-32">
+      <div ref={mainContentRef} className="main-content pb-32" style={contentTopInsetStyle}>
         <div className="container mx-auto px-6">
         
         {/* Tab Navigation */}
