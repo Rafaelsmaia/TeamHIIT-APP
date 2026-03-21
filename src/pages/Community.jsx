@@ -74,6 +74,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { Send, ThumbsUp, MessageCircle, PlusCircle, Camera, Image, X, Heart, MoreHorizontal } from 'lucide-react';
 import { reportContent, blockUser, loadBlockedUserIds } from '../services/ModerationService';
 import AnnouncementsTab from '../components/community/AnnouncementsTab.jsx'
+import { openFileInput, alertFileInputUnavailable } from '../utils/fileInput.js';
 
 // Cache global para posts da comunidade
 let communityPostsCache = null;
@@ -119,7 +120,6 @@ function Community() {
   const [imagePreview, setImagePreview] = useState([]);
   const [compressingImages, setCompressingImages] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
-  const fileInputRef = useRef(null);
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const photoOptionsRef = useRef(null);
@@ -476,6 +476,18 @@ function Community() {
   useEffect(() => {
     fetchPosts();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openCameraPicker = () => {
+    if (!openFileInput(cameraInputRef.current, 'camera')) {
+      alertFileInputUnavailable('camera');
+    }
+  };
+
+  const openGalleryPicker = () => {
+    if (!openFileInput(galleryInputRef.current, 'galeria')) {
+      alertFileInputUnavailable();
+    }
+  };
 
   // Preload de imagens em background após posts carregados
   useEffect(() => {
@@ -982,18 +994,14 @@ function Community() {
                     {showPhotoOptions && (
                       <div className={`absolute left-0 bottom-full mb-2 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-lg border overflow-hidden z-50 min-w-[180px]`}>
                         <button
-                          onClick={() => {
-                            cameraInputRef.current?.click();
-                          }}
+                          onClick={openCameraPicker}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-50 text-gray-700'}`}
                         >
                           <Camera className="w-5 h-5 text-blue-500" />
                           <span className="text-sm font-medium">Tirar foto</span>
                         </button>
                         <button
-                          onClick={() => {
-                            galleryInputRef.current?.click();
-                          }}
+                          onClick={openGalleryPicker}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-50 text-gray-700'}`}
                         >
                           <Image className="w-5 h-5 text-green-500" />
@@ -1061,7 +1069,7 @@ function Community() {
                 <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Nenhum post ainda</h3>
                 <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-6`}>Seja o primeiro a compartilhar sua jornada fitness!</p>
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={openGalleryPicker}
                   disabled={!currentUser}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
                     currentUser

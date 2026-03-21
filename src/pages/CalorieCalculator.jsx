@@ -5,6 +5,7 @@ import Header from '../components/ui/Header.jsx';
 import BottomNavigation from '../components/ui/BottomNavigation.jsx';
 import { fileToBase64 } from '../services/GeminiService.js';
 import { usePWAAuth } from '../hooks/UsePWAAuth.js';
+import { openFileInput, alertFileInputUnavailable } from '../utils/fileInput.js';
 
 // URL da Firebase Function (recriada)
 const CALCULATE_CALORIES_URL = 'https://us-central1-comunidade-team-hiit.cloudfunctions.net/calculateCalories';
@@ -144,6 +145,18 @@ function CalorieCalculator() {
     setError(null);
   }, []);
 
+  const openCameraPicker = () => {
+    if (!openFileInput(cameraInputRef.current, 'camera')) {
+      alertFileInputUnavailable('camera');
+    }
+  };
+
+  const openGalleryPicker = () => {
+    if (!openFileInput(galleryInputRef.current, 'galeria')) {
+      alertFileInputUnavailable();
+    }
+  };
+
   // Tela de carregamento enquanto verifica autenticação
   if (authLoading) {
     return (
@@ -256,7 +269,7 @@ function CalorieCalculator() {
               className="hidden"
             />
             <button
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={openCameraPicker}
               className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed transition-all ${
                 isDarkMode 
                   ? 'border-gray-700 hover:border-orange-500 hover:bg-gray-800/50' 
@@ -278,7 +291,7 @@ function CalorieCalculator() {
               className="hidden"
             />
             <button
-              onClick={() => galleryInputRef.current?.click()}
+              onClick={openGalleryPicker}
               className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed transition-all ${
                 isDarkMode 
                   ? 'border-gray-700 hover:border-orange-500 hover:bg-gray-800/50' 

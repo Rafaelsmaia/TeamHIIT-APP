@@ -23,11 +23,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>O Team HIIT usa a camera para tirar fotos no app.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>O Team HIIT precisa salvar imagens geradas e compartilhadas pelo usuario.</string>
+	<string>Precisamos de acesso à câmera para capturar e enviar fotos no app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O Team HIIT usa sua galeria para selecionar fotos no app.</string>
+	<string>Precisamos de acesso à sua biblioteca de fotos para selecionar e enviar imagens no app.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Instagram, User, Dumbbell, Camera, X, Utensils } from 'lucide-react';
 import { PlatformConfig } from '../../config/platform.js';
+import { openFileInput, alertFileInputUnavailable } from '../../utils/fileInput.js';
 
 function BottomNavigation() {
   const navigate = useNavigate();
@@ -247,6 +248,12 @@ function BottomNavigation() {
     }
   };
 
+  const openCameraPicker = () => {
+    if (!openFileInput(cameraInputRef.current, 'camera')) {
+      alertFileInputUnavailable('camera');
+    }
+  };
+
   // Ocultar o menu inferior na página de apresentação do vídeo (VideoPlayer) e no player dedicado
   const shouldHideNavigation = location.pathname.startsWith('/video/') || location.pathname.startsWith('/player/');
 
@@ -389,7 +396,7 @@ function BottomNavigation() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={openCameraPicker}
                       className="relative -mt-8 flex flex-col items-center justify-center"
                       aria-label="Câmera"
                     >

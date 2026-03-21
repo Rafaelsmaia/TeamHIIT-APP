@@ -6,6 +6,7 @@ import ImageCropperModal from './ImageCropperModal.jsx'
 import { useAspectCropper } from '../../hooks/useAspectCropper.js'
 import NotificationService from '../../services/NotificationService.js'
 import { COMMUNITY_FALLBACK_IMAGE } from '../../utils/mediaHelpers.js'
+import { openFileInput, alertFileInputUnavailable } from '../../utils/fileInput.js'
 
 function AnnouncementsTab({ isAdmin, currentUser, isDarkMode }) {
   const [announcements, setAnnouncements] = useState([])
@@ -221,6 +222,12 @@ function AnnouncementsTab({ isAdmin, currentUser, isDarkMode }) {
     }
   };
 
+  const openAnnouncementPicker = () => {
+    if (!openFileInput(fileInputRef.current, 'galeria')) {
+      alertFileInputUnavailable();
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl shadow-lg border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'} px-6 py-4 flex items-center justify-between`}>
@@ -283,7 +290,7 @@ function AnnouncementsTab({ isAdmin, currentUser, isDarkMode }) {
                 />
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={openAnnouncementPicker}
                   className={`px-3 py-2 rounded-lg text-sm font-medium ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'}`}
                 >
                   Selecionar imagens ({selectedImages.length}/4)

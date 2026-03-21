@@ -11,6 +11,7 @@ import ProfilePhoto from '../components/ProfilePhoto.jsx';
 import BottomNavigation from '../components/ui/BottomNavigation.jsx';
 import CircularProfileCropModal from '../components/CircularProfileCropModal.jsx';
 import { PlatformConfig } from '../config/platform.js';
+import { openFileInput, alertFileInputUnavailable } from '../utils/fileInput.js';
 
 function Profile() {
   const auth = getAuth();
@@ -602,6 +603,18 @@ function Profile() {
     }
   };
 
+  const openCameraPicker = () => {
+    if (!openFileInput(cameraInputRef.current, 'camera')) {
+      alertFileInputUnavailable('camera');
+    }
+  };
+
+  const openGalleryPicker = () => {
+    if (!openFileInput(galleryInputRef.current, 'galeria')) {
+      alertFileInputUnavailable();
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -778,7 +791,7 @@ function Profile() {
                 <div className={`absolute left-0 top-full mt-2 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-lg border overflow-hidden z-50 min-w-[180px]`}>
                   <button
                     onClick={() => {
-                      cameraInputRef.current?.click();
+                      openCameraPicker();
                       setShowPhotoOptions(false);
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-50 text-gray-700'}`}
@@ -788,7 +801,7 @@ function Profile() {
                   </button>
                   <button
                     onClick={() => {
-                      galleryInputRef.current?.click();
+                      openGalleryPicker();
                       setShowPhotoOptions(false);
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-50 text-gray-700'}`}
