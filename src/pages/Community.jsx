@@ -7,11 +7,33 @@ import { COMMUNITY_FALLBACK_IMAGE } from '../utils/mediaHelpers.js';
 const CommunityImage = ({ src, alt, className, fallbackSrc = COMMUNITY_FALLBACK_IMAGE, style, onClick }) => {
   const [imageSrc, setImageSrc] = useState(src || fallbackSrc);
   const [isLoading, setIsLoading] = useState(true);
+  const imgRef = useRef(null);
 
   useEffect(() => {
     setImageSrc(src || fallbackSrc);
     setIsLoading(Boolean(src));
   }, [src, fallbackSrc]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const imageElement = imgRef.current;
+      if (!imageElement?.complete) {
+        return;
+      }
+
+      if (imageElement.naturalWidth > 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (imageSrc !== fallbackSrc) {
+        setImageSrc(fallbackSrc);
+        setIsLoading(false);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [imageSrc, fallbackSrc]);
 
   return (
     <div className={`relative ${className}`} style={style} onClick={onClick}>
@@ -22,6 +44,7 @@ const CommunityImage = ({ src, alt, className, fallbackSrc = COMMUNITY_FALLBACK_
       )}
       
       <img
+        ref={imgRef}
         src={imageSrc}
         alt={alt}
         className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-150`}
